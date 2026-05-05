@@ -1,0 +1,273 @@
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { CommonModule, DatePipe } from '@angular/common';
+import { Navbar } from '../shared/navbar';
+import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
+import { Patient, Treatment, PatientStatus, TreatmentStatus } from '../../models/patient.model';
+import { Notification } from '../../models/notification.model';
+
+@Component({
+  selector: 'app-nurse',
+  imports: [FormsModule, CommonModule, Navbar, DatePipe],
+  templateUrl: './nurse.html',
+  styleUrl: './nurse.css',
+})
+export class NurseDashboard implements OnInit {
+  activeTab = 'overview';
+  patients: Patient[] = [];
+  myTreatments: Treatment[] = [];
+  notifications: Notification[] = [];
+  unreadCount = 0;
+  selectedPatient: Patient | null = null;
+  citizenDetails: any = null;
+  emergencyDetails: any = null;
+  patientTreatments: Treatment[] = [];
+  showTreatmentForm: number | null = null;
+  patientDoctorMap: Map<number, string> = new Map();
+
+  get admittedCount() { return this.patients.filter(p => p.status === PatientStatus.ADMITTED).length; }
+  get criticalCount() { return this.patients.filter(p => p.status === PatientStatus.CRITICAL).length; }
+
+  treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
+  errorMsg = '';
+
+  private get headers() {
+    return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
+  }
+
+  constructor(
+    private http: HttpClient, 
+    private auth: AuthService, 
+    private notificationService: NotificationService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    this.loadPatients();
+    this.loadMyTreatments();
+    this.loadNotifications();
+  }
+
+  loadPatients() {
+    this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
+      .subscribe({ 
+        next: d => {
+          this.patients = d?.data ?? d;
+          this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
+          this.cdr.detectChanges();
+        }, 
+        error: () => {} 
+      });
+  }
+
+  loadMyTreatments() {
+    const nurseId = this.auth.getUser()?.id;
+    this.http.get<any>(`http://localhost:9090/treatments/assigned-by/${nurseId}`, { headers: this.headers })
+      .subscribe({ 
+        next: d => {
+          this.myTreatments = d?.data ?? d;
+          this.cdr.detectChanges();
+        }, 
+        error: () => {} 
+      });
+  }
+
+  loadNotifications() {
+    this.notificationService.getMyNotifications().subscribe({
+      next: d => { 
+        this.notifications = d; 
+        this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  togglePatientDetails(patient: Patient) {
+    this.selectedPatient = patient;
+    this.showTreatmentForm = null;
+    this.citizenDetails = null;
+    this.emergencyDetails = null;
+    this.loadPatientTreatments(patient.patientId);
+    this.loadCitizenDetails(patient.citizenId);
+    this.loadEmergencyDetails(patient.emergencyId);
+    this.activeTab = 'patientDetail';
+  }
+
+  loadPatientTreatments(patientId: number) {
+    this.http.get<any>(`http://localhost:9090/patients/${patientId}/treatments`, { headers: this.headers })
+      .subscribe({ 
+        next: d => {
+          this.patientTreatments = d?.data ?? d;
+          this.cdr.detectChanges();
+        }, 
+        error: () => {} 
+      });
+  }
+
+  loadCitizenDetails(citizenId: number) {
+    this.http.get<any>(`http://localhost:9090/api/citizens/${citizenId}`, { headers: this.headers })
+      .subscribe({ 
+        next: d => {
+          this.citizenDetails = d?.data ?? d;
+          this.cdr.detectChanges();
+        }, 
+        error: () => {} 
+      });
+  }
+
+  loadEmergencyDetails(emergencyId: number) {
+    this.http.get<any>(`http://localhost:9090/emergencies/${emergencyId}`, { headers: this.headers })
+      .subscribe({ 
+        next: d => {
+          this.emergencyDetails = d?.data ?? d;
+          this.cdr.detectChanges();
+        }, 
+        error: () => {} 
+      });
+  }
+
+  openTreatmentForm(patient: Patient) {
+    this.showTreatmentForm = patient.patientId;
+    this.treatmentForm = { 
+      patientId: patient.patientId, 
+      description: '', 
+      medicationName: '', 
+      dosage: '' 
+    };
+    this.errorMsg = '';
+  }
+
+  backToPatients() {
+    this.activeTab = 'patients';
+    this.selectedPatient = null;
+    this.citizenDetails = null;
+    this.emergencyDetails = null;
+    this.showTreatmentForm = null;
+    this.patientTreatments = [];
+    this.errorMsg = '';
+  }
+
+  cancelTreatmentForm() {
+    this.showTreatmentForm = null;
+    this.treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
+    this.errorMsg = '';
+  }
+
+  addTreatment() {
+    this.errorMsg = '';
+    this.http.post<any>('http://localhost:9090/treatments', this.treatmentForm, { headers: this.headers })
+      .subscribe({
+        next: () => { 
+          this.showTreatmentForm = null;
+          this.treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
+          this.loadMyTreatments();
+          if (this.selectedPatient) {
+            this.loadPatientTreatments(this.selectedPatient.patientId);
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.errorMsg = err.error?.message || 'Failed to add treatment';
+        }
+      });
+  }
+
+  updateTreatmentStatus(treatmentId: number, status: string) {
+    this.http.patch<any>(`http://localhost:9090/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
+      .subscribe({
+        next: () => {
+          if (this.selectedPatient) {
+            this.loadPatientTreatments(this.selectedPatient.patientId);
+          }
+          this.loadMyTreatments();
+        },
+        error: (err) => {
+          this.errorMsg = err.error?.message || 'Failed to update treatment status';
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  updatePatientStatus(patientId: number, status: string) {
+    this.http.patch<any>(`http://localhost:9090/patients/${patientId}/status?status=${status}`, {}, { headers: this.headers })
+      .subscribe({
+        next: () => {
+          this.loadPatients();
+          if (this.selectedPatient && this.selectedPatient.patientId === patientId) {
+            this.selectedPatient = { ...this.selectedPatient, status: status as any };
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.errorMsg = err.error?.message || 'Failed to update patient status';
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  markRead(id: number) {
+    this.notificationService.markAsRead(id).subscribe({
+      next: () => this.loadNotifications(),
+      error: () => {}
+    });
+  }
+
+  markAllRead() {
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => this.loadNotifications(),
+      error: () => {}
+    });
+  }
+
+  loadAssignedDoctor(patientId: number) {
+    this.http.get<any>(`http://localhost:9090/patients/${patientId}/treatments`, { headers: this.headers })
+      .subscribe({
+        next: d => {
+          const treatments = d?.data ?? d;
+          if (treatments && treatments.length > 0) {
+            const latestTreatment = treatments[0];
+            if (latestTreatment.assignedById) {
+              this.loadDoctorName(patientId, latestTreatment.assignedById);
+            }
+          } else {
+            this.patientDoctorMap.set(patientId, 'Not assigned');
+          }
+        },
+        error: () => {
+          this.patientDoctorMap.set(patientId, 'Unknown');
+        }
+      });
+  }
+
+  loadDoctorName(patientId: number, doctorId: number) {
+    this.http.get<any>(`http://localhost:9090/staff/${doctorId}`, { headers: this.headers })
+      .subscribe({
+        next: d => {
+          const staff = d?.data ?? d;
+          this.patientDoctorMap.set(patientId, staff.name);
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.http.get<any>(`http://localhost:9090/admin/users/${doctorId}`, { headers: this.headers })
+            .subscribe({
+              next: d => {
+                const user = d?.data ?? d;
+                this.patientDoctorMap.set(patientId, user.name);
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.patientDoctorMap.set(patientId, 'Unknown Doctor');
+                this.cdr.detectChanges();
+              }
+            });
+        }
+      });
+  }
+
+  getAssignedDoctorName(patientId: number): string {
+    return this.patientDoctorMap.get(patientId) || 'Loading...';
+  }
+}

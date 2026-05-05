@@ -1,0 +1,669 @@
+<app-navbar></app-navbar>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <nav>
+      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+        <span>📊</span> Overview
+      </button>
+      <button [class.active]="activeTab==='facilities'" (click)="activeTab='facilities'">
+        <span>🏥</span> Facilities
+      </button>
+      <button [class.active]="activeTab==='addFacility'" (click)="activeTab='addFacility'">
+        <span>➕</span> Add Facility
+      </button>
+      <button [class.active]="activeTab==='addUser'" (click)="activeTab='addUser'">
+        <span>👤</span> Add User
+      </button>
+      <button [class.active]="activeTab==='ambulances'" (click)="activeTab='ambulances'">
+        <span>🚑</span> Ambulances
+      </button>
+      <button [class.active]="activeTab==='users'" (click)="activeTab='users'">
+        <span>🔑</span> User Management
+      </button>
+      <button [class.active]="activeTab==='patientsManagement'" (click)="activeTab='patientsManagement'; loadPatients()">
+        <span>🏥</span> Patients Management
+      </button>
+      <button [class.active]="activeTab==='pendingDocs'" (click)="navigateToPendingDocs()">
+        <span>📄</span> Document Verification
+        @if ((pendingCount$ | async) ?? 0 > 0) { 
+          <span class="badge">{{ pendingCount$ | async }}</span> 
+        }
+      </button>
+      <button [class.active]="activeTab==='admitPatient'" (click)="activeTab='admitPatient'; loadDispatchedEmergencies()">
+        <span>🛏️</span> Admit Patient
+        @if (dispatchedEmergencies.length > 0) { 
+          <span class="badge">{{ dispatchedEmergencies.length }}</span> 
+        }
+      </button>
+      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'; loadNotifications()">
+        <span>🔔</span> Notifications
+        @if (unreadCount > 0) { 
+          <span class="badge">{{ unreadCount }}</span> 
+        }
+      </button>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    @if (activeTab === 'overview') {
+      <div class="page-header">
+        <h2>Hospital Admin Panel</h2>
+        <p>Manage facilities, staff, ambulances and patients</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-icon">🏥</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ facilities.length }}</span>
+            <span class="stat-label">Facilities</span>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ users.length }}</span>
+            <span class="stat-label">Registered Users</span>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🛏️</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ patients.length }}</span>
+            <span class="stat-label">Patients</span>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">🚑</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ ambulances.length }}</span>
+            <span class="stat-label">Ambulances</span>
+          </div>
+        </div>
+        <div class="stat-card" 
+             [ngClass]="dispatchedEmergencies.length > 0 ? 'green' : ''"
+             (click)="activeTab='admitPatient'; loadDispatchedEmergencies()" 
+             style="cursor:pointer">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ dispatchedEmergencies.length }}</span>
+            <span class="stat-label">Awaiting Admission</span>
+          </div>
+        </div>
+        <div class="stat-card" 
+             [ngClass]="((pendingCount$ | async) ?? 0) > 0 ? 'orange' : ''" 
+             (click)="navigateToPendingDocs()" 
+             style="cursor:pointer">
+          <div class="stat-icon">📄</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ pendingCount$ | async }}</span>
+            <span class="stat-label">Pending Verifications</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'facilities') {
+      <div class="page-header"><h2>Facilities</h2></div>
+      
+      <div class="filter-section">
+        <label>Filter by Status:</label>
+        <select [(ngModel)]="facilityStatusFilter" (change)="onFacilityFilterChange()" class="filter-select">
+          <option value="ALL">All Facilities</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+          <option value="MAINTENANCE">Maintenance</option>
+        </select>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Location</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (f of filteredFacilities; track f.facilityId) {
+              <tr>
+                <td>#{{ f.facilityId }}</td>
+                <td>{{ f.name }}</td>
+                <td>{{ f.type }}</td>
+                <td>{{ f.location }}</td>
+                <td>{{ f.capacity }}</td>
+                <td><span class="status-badge" [class]="f.status.toLowerCase()">{{ f.status }}</span></td>
+                <td>
+                  <button class="btn-sm btn-info" (click)="editFacility(f)" style="margin-right:0.5rem">✏️ Edit</button>
+                  @if (f.status === 'ACTIVE') {
+                    <button class="btn-sm btn-warning" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.INACTIVE)">Deactivate</button>
+                  } @else if (f.status === 'INACTIVE') {
+                    <button class="btn-sm btn-success" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                  } @else {
+                    <button class="btn-sm btn-success" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                  }
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="7" class="empty">No facilities</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'editFacility' && selectedFacility) {
+      <div class="page-header">
+        <h2>Edit Facility: {{ selectedFacility.name }}</h2>
+        <button class="btn-back" (click)="cancelEditFacility()">← Back</button>
+      </div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="submitEditFacility()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Facility Name</label>
+              <input type="text" [(ngModel)]="editFacilityForm.name" name="name" placeholder="Hospital name" required />
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="editFacilityForm.type" name="type">
+                <option value="HOSPITAL">Hospital</option>
+                <option value="CLINIC">Clinic</option>
+                <option value="AMBULANCE_STATION">Ambulance Station</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" [(ngModel)]="editFacilityForm.location" name="location" placeholder="Address" required />
+            </div>
+            <div class="form-group">
+              <label>Capacity</label>
+              <input type="number" [(ngModel)]="editFacilityForm.capacity" name="capacity" placeholder="Bed count" required />
+            </div>
+          </div>
+          <div style="display:flex;gap:1rem">
+            <button type="submit" class="btn-primary">💾 Update Facility</button>
+            <button type="button" class="btn-secondary" (click)="cancelEditFacility()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'addFacility') {
+      <div class="page-header"><h2>Add Facility</h2></div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="addFacility()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Facility Name</label>
+              <input type="text" [(ngModel)]="facilityForm.name" name="name" placeholder="Hospital name" required />
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="facilityForm.type" name="type">
+                <option value="HOSPITAL">Hospital</option>
+                <option value="CLINIC">Clinic</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" [(ngModel)]="facilityForm.location" name="location" placeholder="Address" required />
+            </div>
+            <div class="form-group">
+              <label>Capacity</label>
+              <input type="number" [(ngModel)]="facilityForm.capacity" name="capacity" placeholder="Bed count" required />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">🏥 Add Facility</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'addUser') {
+      <div class="page-header"><h2>Add User</h2></div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="addUser()">
+          <div class="form-group">
+            <label>Select Role</label>
+            <select [(ngModel)]="userForm.role" name="role" required>
+              <option value="">-- Select Role --</option>
+              <option value="DOCTOR">Doctor</option>
+              <option value="NURSE">Nurse</option>
+              <option value="DISPATCHER">Dispatcher</option>
+              <option value="COMPLIANCE_OFFICER">Compliance Officer</option>
+              <option value="CITY_HEALTH_OFFICER">City Health Officer</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" [(ngModel)]="userForm.name" name="name" placeholder="Full name" required />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="userForm.email" name="email" placeholder="Email address" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" [(ngModel)]="userForm.password" name="password" placeholder="Password" required />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" [(ngModel)]="userForm.phone" name="phone" placeholder="Phone number" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" [disabled]="!userForm.role">👤 Add User</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'ambulances') {
+      <div class="page-header"><h2>Ambulance Registry</h2></div>
+      <div class="form-card" style="margin-bottom:1.5rem">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="registerAmbulance()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vehicle Number</label>
+              <input type="text" [(ngModel)]="ambulanceForm.vehicleNumber" name="vehicleNumber" placeholder="e.g. AMB-001" required />
+            </div>
+            <div class="form-group">
+              <label>Model (Optional)</label>
+              <input type="text" [(ngModel)]="ambulanceForm.model" name="model" placeholder="e.g. Mercedes Sprinter" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">🚑 Register Ambulance</button>
+        </form>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Vehicle No.</th><th>Model</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (a of ambulances; track a.ambulanceId) {
+              <tr>
+                <td>#{{ a.ambulanceId }}</td>
+                <td>{{ a.vehicleNumber }}</td>
+                <td>{{ a.model || 'N/A' }}</td>
+                <td><span class="status-badge" [class]="a.status.toLowerCase()">{{ a.status }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="4" class="empty">No ambulances</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'users') {
+      <div class="page-header"><h2>User Management</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (u of users; track trackByUserId($index, u)) {
+              <tr>
+                <td>#{{ u.userId }}</td>
+                <td>{{ u.name }}</td>
+                <td>{{ u.email }}</td>
+                <td><span class="role-tag" [class]="'role-' + u.role.toLowerCase()">{{ u.role }}</span></td>
+                <td>
+                  <span class="status-badge" [class]="(u.status || 'ACTIVE').toLowerCase()">{{ u.status || 'ACTIVE' }}</span>
+                </td>
+                <td>
+                  <button class="btn-sm btn-info" (click)="viewUserDetails(u)" style="margin-right:0.5rem">View</button>
+                  @if (u.status === 'ACTIVE') {
+                    <button class="btn-sm btn-warning" (click)="deactivateUser(u.userId)">Deactivate</button>
+                  } @else {
+                    <button class="btn-sm btn-success" (click)="activateUser(u.userId)">Activate</button>
+                  }
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty">No users</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'userDetail' && selectedUser) {
+      <div class="page-header">
+        <h2>User Details: {{ selectedUser.name }}</h2>
+        <button class="btn-back" (click)="activeTab='users'">← Back</button>
+      </div>
+      <div class="detail-card">
+        <h3>User Information</h3>
+        <div class="detail-row"><span>User ID</span><strong>#{{ selectedUser.userId }}</strong></div>
+        <div class="detail-row"><span>Name</span><strong>{{ selectedUser.name }}</strong></div>
+        <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
+        <div class="detail-row"><span>Phone</span><strong>{{ selectedUser.phone || 'N/A' }}</strong></div>
+        <div class="detail-row"><span>Role</span><span class="role-tag" [class]="'role-' + selectedUser.role.toLowerCase()">{{ selectedUser.role }}</span></div>
+        <div class="detail-row"><span>Status</span><span class="status-badge" [class]="(selectedUser.status || 'ACTIVE').toLowerCase()">{{ selectedUser.status || 'ACTIVE' }}</span></div>
+        <div style="margin-top:1.5rem">
+          @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+          @if (selectedUser.status === 'ACTIVE') {
+            <button class="btn-warning" (click)="deactivateUser(selectedUser.userId)">Deactivate User</button>
+          } @else {
+            <button class="btn-success" (click)="activateUser(selectedUser.userId)">Activate User</button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'pendingDocs') {
+      <div class="page-header"><h2>Document Verification Queue</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Citizen ID</th><th>Name</th><th>Contact</th><th>Pending Docs</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (c of pendingDocuments; track c.citizenId) {
+              <tr>
+                <td>#{{ c.citizenId }}</td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.contactInfo }}</td>
+                <td><span class="status-badge pending">{{ c.pendingCount }} Pending</span></td>
+                <td>
+                  <button class="btn-sm btn-info" (click)="viewCitizenDocuments(c)">Review</button>
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="5" class="empty">No pending documents</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'verifyDocuments' && selectedCitizen) {
+      <div class="page-header">
+        <h2>Documents for {{ selectedCitizen.name }}</h2>
+        <button class="btn-back" (click)="activeTab='pendingDocs'">← Back</button>
+      </div>
+      <div class="detail-card">
+        <h3>Citizen Information</h3>
+        <div class="detail-row"><span>Citizen ID</span><strong>#{{ selectedCitizen.citizenId }}</strong></div>
+        <div class="detail-row"><span>Name</span><strong>{{ selectedCitizen.name }}</strong></div>
+        <div class="detail-row"><span>Contact</span><strong>{{ selectedCitizen.contactInfo }}</strong></div>
+        <div class="detail-row"><span>Address</span><strong>{{ selectedCitizen.address || 'N/A' }}</strong></div>
+      </div>
+      <div class="table-card" style="margin-top:1.5rem">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <table>
+          <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (doc of citizenDocuments; track doc.documentId) {
+              <tr>
+                <td>#{{ doc.documentId }}</td>
+                <td>{{ doc.uploadedDate }}</td>
+                <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
+                <td>
+                  <button class="btn-sm btn-info" (click)="previewDocument(doc)" style="margin-right:0.5rem">👁️ View</button>
+                  @if (doc.verificationStatus === 'PENDING') {
+                    <button class="btn-sm btn-success" (click)="verifyDocument(doc.documentId, 'VERIFIED')" style="margin-right:0.5rem">✓ Verify</button>
+                    <button class="btn-sm btn-danger" (click)="verifyDocument(doc.documentId, 'REJECTED')">✗ Reject</button>
+                  } @else {
+                    <span style="color:#666">{{ doc.verificationStatus }}</span>
+                  }
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="4" class="empty">No documents</td></tr> }
+          </tbody>
+        </table>
+        
+        @if (isLoadingDocument) {
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading document...</p>
+          </div>
+        }
+        
+        @if (documentPreviewUrl && !isLoadingDocument) {
+          <div class="document-preview">
+            <h3>Document Preview</h3>
+            <iframe [src]="documentPreviewUrl" style="width:100%;height:600px;border:1px solid #ddd;border-radius:8px"></iframe>
+          </div>
+        }
+      </div>
+    }
+
+    @if (activeTab === 'patientsManagement') {
+      <div class="page-header"><h2>Patients Management</h2></div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient ID</th>
+              <th>Reported By</th>
+              <th>Ward</th>
+              <th>Admission Date</th>
+              <th>Status</th>
+              <th>Assigned Doctor</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of patients; track p.patientId) {
+              <tr>
+                <td>#{{ p.patientId }}</td>
+                <td>{{ p.name || 'Loading...' }}</td>
+                <td>{{ p.ward || 'N/A' }}</td>
+                <td>{{ p.admissionDate | date }}</td>
+                <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
+                <td>{{ getAssignedDoctorName(p.patientId) || 'Not assigned' }}</td>
+                <td>
+                  <button class="btn-sm btn-info" (click)="viewPatientDetails(p)" style="margin-right:0.5rem">👁️ View</button>
+                  @if (p.status !== 'DISCHARGED') {
+                    <button class="btn-sm btn-warning" (click)="dischargePatient(p.patientId)">Discharge</button>
+                  } @else {
+                    <span style="color:#666">Discharged</span>
+                  }
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="7" class="empty">No patients found</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'admitPatient') {
+      <div class="page-header"><h2>Admit Patient</h2></div>
+      
+      @if (dispatchedEmergencies.length > 0) {
+        <div class="page-header" style="margin-top:0">
+          <p>Select an emergency to admit the patient</p>
+        </div>
+        <div class="table-card" style="margin-bottom:1.5rem">
+          <table>
+            <thead><tr><th>Emergency ID</th><th>Type</th><th>Location</th><th>Reported By</th><th>Citizen ID</th><th>Ambulance</th><th>Dispatched At</th><th>Action</th></tr></thead>
+            <tbody>
+              @for (e of dispatchedEmergencies; track e.emergencyId) {
+                <tr>
+                  <td>#{{ e.emergencyId }}</td>
+                  <td><span class="type-tag">{{ e.type }}</span></td>
+                  <td>{{ e.location }}</td>
+                  <td><strong>{{ e.reportedBy || 'Loading...' }}</strong></td>
+                  <td>#{{ e.citizenId }}</td>
+                  <td>{{ e.ambulance?.vehicleNumber || 'N/A' }}</td>
+                  <td>{{ e.dispatchedAt | date:'short' }}</td>
+                  <td><button class="btn-sm btn-success" (click)="prepareAdmit(e)">🛏️ Admit</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="alert" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;margin-bottom:1.5rem">
+          ℹ️ No dispatched emergencies awaiting admission
+        </div>
+      }
+      
+      @if (admitForm.emergencyId > 0) {
+        <div class="page-header">
+          <h3>Admission Form</h3>
+        </div>
+        <div class="form-card">
+          @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+          <form (ngSubmit)="admitPatient()">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Citizen ID</label>
+                <input type="number" [(ngModel)]="admitForm.citizenId" name="citizenId" readonly style="background:#f3f4f6" />
+              </div>
+              <div class="form-group">
+                <label>Emergency ID</label>
+                <input type="number" [(ngModel)]="admitForm.emergencyId" name="emergencyId" readonly style="background:#f3f4f6" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Ward</label>
+              <select [(ngModel)]="admitForm.ward" name="ward" required>
+                <option value="">-- Select Ward --</option>
+                <option value="ICU">ICU (Intensive Care Unit)</option>
+                <option value="GENERAL">General Ward</option>
+                <option value="EMERGENCY">Emergency Ward</option>
+                <option value="CARDIOLOGY">Cardiology Ward</option>
+                <option value="PEDIATRIC">Pediatric Ward</option>
+                <option value="MATERNITY">Maternity Ward</option>
+                <option value="SURGICAL">Surgical Ward</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea [(ngModel)]="admitForm.notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary">🛏️ Admit Patient</button>
+          </form>
+        </div>
+      }
+    }
+
+    @if (activeTab === 'patientDetail' && selectedPatient) {
+      <div class="page-header">
+        <h2>Patient Details - #{{ selectedPatient.patientId }}</h2>
+        <button class="btn-back" (click)="backToPatientsList()">← Back to Patients</button>
+      </div>
+
+      <div class="patient-detail-view">
+        <div class="info-cards-grid">
+          <div class="detail-card">
+            <h3>🏥 Patient Information</h3>
+            <div class="detail-grid">
+              <div class="detail-item"><span>Patient ID:</span><strong>#{{ selectedPatient.patientId }}</strong></div>
+              <div class="detail-item"><span>Citizen ID:</span><strong>{{ selectedPatient.citizenId }}</strong></div>
+              <div class="detail-item"><span>Emergency ID:</span><strong>{{ selectedPatient.emergencyId }}</strong></div>
+              <div class="detail-item"><span>Ward:</span><strong>{{ selectedPatient.ward || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Admission Date:</span><strong>{{ selectedPatient.admissionDate | date:'medium' }}</strong></div>
+              <div class="detail-item"><span>Status:</span><span class="status-badge" [class]="selectedPatient.status.toLowerCase()">{{ selectedPatient.status }}</span></div>
+              @if (selectedPatient.dischargeDate) {
+                <div class="detail-item"><span>Discharge Date:</span><strong>{{ selectedPatient.dischargeDate | date:'medium' }}</strong></div>
+              }
+              <div class="detail-item"><span>Assigned Doctor:</span><strong>{{ getAssignedDoctorName(selectedPatient.patientId) || 'Not assigned' }}</strong></div>
+            </div>
+            @if (selectedPatient.notes) {
+              <div class="notes-section">
+                <strong>Admission Notes:</strong>
+                <p>{{ selectedPatient.notes }}</p>
+              </div>
+            }
+          </div>
+
+          @if (patientCitizenDetails) {
+            <div class="detail-card">
+              <h3>👤 Citizen Information</h3>
+              <div class="detail-grid">
+                <div class="detail-item"><span>Name:</span><strong>{{ patientCitizenDetails.name }}</strong></div>
+                <div class="detail-item"><span>Contact:</span><strong>{{ patientCitizenDetails.contactInfo }}</strong></div>
+                @if (patientCitizenDetails.dateOfBirth) {
+                  <div class="detail-item"><span>Date of Birth:</span><strong>{{ patientCitizenDetails.dateOfBirth }}</strong></div>
+                }
+                @if (patientCitizenDetails.gender) {
+                  <div class="detail-item"><span>Gender:</span><strong>{{ patientCitizenDetails.gender }}</strong></div>
+                }
+                @if (patientCitizenDetails.address) {
+                  <div class="detail-item"><span>Address:</span><strong>{{ patientCitizenDetails.address }}</strong></div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (patientEmergencyDetails) {
+            <div class="detail-card emergency-card">
+              <h3>🚨 Emergency Details</h3>
+              <div class="detail-grid">
+                <div class="detail-item"><span>Type:</span><strong class="emergency-type">{{ patientEmergencyDetails.type }}</strong></div>
+                <div class="detail-item"><span>Location:</span><strong>{{ patientEmergencyDetails.location }}</strong></div>
+                <div class="detail-item"><span>Status:</span><span class="status-badge" [class]="patientEmergencyDetails.status.toLowerCase()">{{ patientEmergencyDetails.status }}</span></div>
+                <div class="detail-item"><span>Reported At:</span><strong>{{ patientEmergencyDetails.createdAt | date:'medium' }}</strong></div>
+                @if (patientEmergencyDetails.dispatchedAt) {
+                  <div class="detail-item"><span>Dispatched At:</span><strong>{{ patientEmergencyDetails.dispatchedAt | date:'medium' }}</strong></div>
+                }
+              </div>
+              @if (patientEmergencyDetails.description) {
+                <div class="notes-section">
+                  <strong>Description:</strong>
+                  <p>{{ patientEmergencyDetails.description }}</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="treatments-card">
+          <div class="section-header">
+            <h3>Treatment History</h3>
+          </div>
+
+          <div class="treatments-list">
+            @for (t of patientTreatments; track t.treatmentId) {
+              <div class="treatment-item">
+                <div class="treatment-header">
+                  <span class="treatment-id">#{{ t.treatmentId }}</span>
+                  <span class="treatment-status" [class]="t.status.toLowerCase()">{{ t.status }}</span>
+                </div>
+                <p class="treatment-desc"><strong>Description:</strong> {{ t.description }}</p>
+                @if (t.medicationName) {
+                  <p class="treatment-med"><strong>Medication:</strong> {{ t.medicationName }} - {{ t.dosage }}</p>
+                }
+                <p class="treatment-date"><strong>Start Date:</strong> {{ t.startDate | date:'medium' }}</p>
+                @if (t.endDate) {
+                  <p class="treatment-date"><strong>End Date:</strong> {{ t.endDate | date:'medium' }}</p>
+                }
+              </div>
+            }
+            @empty {
+              <p class="empty">No treatments recorded yet</p>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'notifications') {
+      <div class="page-header">
+        <h2>Notifications</h2>
+        @if (unreadCount > 0) {
+          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto">✓ Mark All Read</button>
+        }
+      </div>
+      <div class="notifications-list">
+        @for (n of notifications; track n.notificationId) {
+          <div class="notification-item" [class.unread]="n.status==='UNREAD'">
+            <div class="notif-content">
+              <span class="notif-category">{{ n.category }}</span>
+              <p>{{ n.message }}</p>
+              <small>{{ n.createdDate | date:'medium' }}</small>
+            </div>
+            @if (n.status === 'UNREAD') {
+              <button class="btn-read" (click)="markRead(n.notificationId)">Mark Read</button>
+            }
+          </div>
+        }
+        @empty { <p class="empty">No notifications</p> }
+      </div>
+    }
+
+  </main>
+</div>

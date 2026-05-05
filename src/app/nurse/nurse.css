@@ -1,0 +1,319 @@
+/* ============================================
+   Nurse Dashboard - Healthcare Blue Theme
+   ============================================ */
+
+@import '../citizen/citizen.css';
+
+/* Override primary colors with blue theme for nurses */
+.dashboard {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.sidebar button.active {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+}
+
+.sidebar button.active::before {
+  background: #2563eb;
+}
+
+.sidebar button:hover {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+}
+
+.stat-card.blue .stat-icon {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.stat-card.green .stat-icon {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.stat-card.red .stat-icon {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.stat-card::before {
+  background: linear-gradient(90deg, #2563eb, #1e40af);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.page-header h2 {
+  color: #1e40af;
+}
+
+.notification-item.unread {
+  background: linear-gradient(135deg, #eff6ff 0%, white 100%);
+  border-left: 4px solid #2563eb;
+}
+
+.btn-read {
+  background: #2563eb;
+}
+
+.btn-read:hover {
+  background: #1e40af;
+}
+
+/* Nurse-specific accent colors */
+.nurse-accent {
+  color: #1e40af;
+  font-weight: 700;
+}
+
+.treatment-card {
+  border-left: 4px solid #2563eb;
+}
+
+.patient-status.admitted {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+/* Badge styling for sidebar */
+.sidebar button .badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.9; }
+}
+
+/* Patient Detail View */
+.patient-detail-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-card, .treatments-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.detail-card h3, .treatments-card h3 {
+  margin: 0 0 1rem 0;
+  color: #1e40af;
+  font-size: 1.25rem;
+}
+
+.emergency-card {
+  border-left: 4px solid #ef4444;
+}
+
+.emergency-card h3 {
+  color: #dc2626;
+}
+
+.emergency-type {
+  color: #dc2626;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.treatments-card {
+  margin-top: 0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item span {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.detail-item strong {
+  color: #111827;
+  font-size: 1rem;
+}
+
+.notes-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.notes-section p {
+  margin: 0.5rem 0 0 0;
+  color: #374151;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.treatment-form {
+  background: #eff6ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #bfdbfe;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.treatments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.treatment-item {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 3px solid #2563eb;
+}
+
+.treatment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.treatment-id {
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.treatment-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.treatment-status.ongoing {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.treatment-status.completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.treatment-status.cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.treatment-desc, .treatment-med, .treatment-date {
+  margin: 0.5rem 0;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.treatment-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  border: none;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}

@@ -1,0 +1,294 @@
+<app-navbar></app-navbar>
+<app-toast></app-toast>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <nav>
+      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+        <span>📊</span> Overview
+      </button>
+      <button [class.active]="activeTab==='profile'" (click)="activeTab='profile'; loadProfile()">
+        <span>👤</span> My Profile
+      </button>
+      <button [class.active]="activeTab==='documents'" (click)="activeTab='documents'; loadDocuments()">
+        <span>📄</span> Documents
+        @if (pendingDocsCount > 0) { 
+          <span class="badge">{{ pendingDocsCount }}</span> 
+        }
+      </button>
+      <button [class.active]="activeTab==='report'" (click)="activeTab='report'">
+        <span>🚨</span> Report Emergency
+      </button>
+      <button [class.active]="activeTab==='emergencies'" (click)="activeTab='emergencies'">
+        <span>📋</span> My Emergencies
+      </button>
+      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+        <span>🔔</span> Notifications
+        @if (unreadCount > 0) { 
+          <span class="badge">{{ unreadCount }}</span> 
+        }
+      </button>
+    </nav>
+  </aside>
+
+  <main class="content">
+    @if (activeTab === 'overview') {
+      <div class="page-header">
+        <h2>Citizen Portal</h2>
+        <p>Manage your healthcare services and emergencies</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ emergencies.length }}</span>
+            <span class="stat-label">Total Emergencies</span>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ pendingCount }}</span>
+            <span class="stat-label">Pending</span>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ resolvedCount }}</span>
+            <span class="stat-label">Resolved</span>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">🔔</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ unreadCount }}</span>
+            <span class="stat-label">Unread Alerts</span>
+          </div>
+        </div>
+        <div class="stat-card" 
+             [ngClass]="pendingDocsCount > 0 ? 'orange' : ''"
+             (click)="activeTab='documents'; loadDocuments()" 
+             style="cursor:pointer">
+          <div class="stat-icon">📄</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ documents.length }}</span>
+            <span class="stat-label">Documents</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'profile') {
+      <div class="page-header">
+        <h2>My Profile</h2>
+        @if (!isEditMode && profile) {
+          <button class="btn-primary" (click)="enterEditMode()" style="margin-left:auto">✏️ Edit Profile</button>
+        }
+      </div>
+      
+      @if (!isEditMode && profile) {
+        <!-- VIEW MODE -->
+        <div class="form-card">
+          @if (!profile) {
+            <p class="empty">Loading profile...</p>
+          } @else {
+            <div class="profile-view">
+              <div class="profile-field">
+                <label>Full Name</label>
+                <p>{{ profile.name || 'Not provided' }}</p>
+              </div>
+              <div class="profile-field">
+                <label>Date of Birth</label>
+                <p>{{ profile.dateOfBirth || 'Not provided' }}</p>
+              </div>
+              <div class="profile-field">
+                <label>Gender</label>
+                <p>{{ profile.gender || 'Not provided' }}</p>
+              </div>
+              <div class="profile-field">
+                <label>Contact Info</label>
+                <p>{{ profile.contactInfo || 'Not provided' }}</p>
+              </div>
+              <div class="profile-field">
+                <label>Address</label>
+                <p>{{ profile.address || 'Not provided' }}</p>
+              </div>
+              <div class="profile-field">
+                <label>Status</label>
+                <p><span class="status-badge" [class]="profile.status.toLowerCase()">{{ profile.status }}</span></p>
+              </div>
+              @if (profile.isVerified !== undefined) {
+                <div class="profile-field">
+                  <label>Verification Status</label>
+                  <p><span class="status-badge" [class]="profile.isVerified ? 'verified' : 'pending'">{{ profile.isVerified ? 'VERIFIED' : 'PENDING' }}</span></p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- EDIT MODE (or CREATE MODE if profile is null) -->
+        <div class="form-card">
+          @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+          <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" formControlName="name" placeholder="Your name" />
+              @if (profileForm.get('name')?.invalid && profileForm.get('name')?.touched) {
+                <small class="error-text">Name is required</small>
+              }
+            </div>
+            <div class="form-group">
+              <label>Date of Birth *</label>
+              <input type="date" formControlName="dateOfBirth" />
+              @if (profileForm.get('dateOfBirth')?.invalid && profileForm.get('dateOfBirth')?.touched) {
+                <small class="error-text">Date of birth is required</small>
+              }
+            </div>
+            <div class="form-group">
+              <label>Gender *</label>
+              <select formControlName="gender">
+                <option value="">Select Gender</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+              @if (profileForm.get('gender')?.invalid && profileForm.get('gender')?.touched) {
+                <small class="error-text">Gender is required</small>
+              }
+            </div>
+            <div class="form-group">
+              <label>Contact Info * (10 digits)</label>
+              <input type="text" formControlName="contactInfo" placeholder="Phone number (10 digits)" maxlength="10" />
+              @if (profileForm.get('contactInfo')?.invalid && profileForm.get('contactInfo')?.touched) {
+                <small class="error-text">Valid 10-digit phone number is required</small>
+              }
+            </div>
+            <div class="form-group">
+              <label>Address *</label>
+              <textarea formControlName="address" rows="2" placeholder="Your address"></textarea>
+              @if (profileForm.get('address')?.invalid && profileForm.get('address')?.touched) {
+                <small class="error-text">Address is required</small>
+              }
+            </div>
+            <div style="display:flex;gap:1rem">
+              <button type="submit" class="btn-primary" [disabled]="profileForm.invalid">💾 Save Profile</button>
+              <button type="button" class="btn-secondary" (click)="cancelEdit()">✖️ Cancel</button>
+            </div>
+          </form>
+        </div>
+      }
+    }
+
+    @if (activeTab === 'documents') {
+      <div class="page-header">
+        <h2>My Documents</h2>
+        <p>Upload and manage your identity and medical documents</p>
+      </div>
+      <div class="form-card" style="margin-bottom:1.5rem">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="uploadDocument()">
+          <div class="form-group">
+            <label>Upload Document (ID, Medical Records, Insurance)</label>
+            <input type="file" (change)="onFileSelected($event)" accept=".pdf,.jpg,.jpeg,.png" required />
+          </div>
+          <button type="submit" class="btn-primary" [disabled]="!selectedFile">📄 Upload Document</button>
+        </form>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Uploaded Date</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            @for (doc of documents; track doc.documentId) {
+              <tr>
+                <td>#{{ doc.documentId }}</td>
+                <td>{{ doc.uploadedDate | date }}</td>
+                <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="3" class="empty">No documents uploaded</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'report') {
+      <div class="page-header">
+        <h2>Report Emergency</h2>
+        <p>Submit an emergency report for immediate response</p>
+      </div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="reportEmergency()">
+          <div class="form-group">
+            <label>Emergency Type</label>
+            <select [(ngModel)]="emergencyForm.type" name="type">
+              @for (t of emergencyTypes; track t) {
+                <option [value]="t">{{ t.replace('_', ' ') }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" [(ngModel)]="emergencyForm.location" name="location" placeholder="Enter your location" required />
+          </div>
+          <div class="form-group">
+            <label>Description (Optional)</label>
+            <textarea [(ngModel)]="emergencyForm.description" name="description" rows="3" placeholder="Describe the emergency situation..."></textarea>
+          </div>
+          <button type="submit" class="btn-primary">🚨 Report Emergency</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'emergencies') {
+      <div class="page-header"><h2>My Emergencies</h2></div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Type</th><th>Location</th><th>Date</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            @for (e of emergencies; track e.emergencyId) {
+              <tr>
+                <td>#{{ e.emergencyId }}</td>
+                <td>{{ e.type }}</td>
+                <td>{{ e.location }}</td>
+                <td>{{ e.date | date }}</td>
+                <td><span class="status-badge" [class]="e.status.toLowerCase()">{{ e.status }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="5" class="empty">No emergencies found</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'notifications') {
+      <div class="page-header">
+        <h2>Notifications</h2>
+        @if (unreadCount > 0) {
+          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto">✓ Mark All Read</button>
+        }
+      </div>
+      <div class="notifications-list">
+        @for (n of notifications; track n.notificationId) {
+          <div class="notification-item" [class.unread]="n.status === 'UNREAD'">
+            <div class="notif-content">
+              <span class="notif-category">{{ n.category }}</span>
+              <p>{{ n.message }}</p>
+              <small>{{ n.createdDate | date:'medium' }}</small>
+            </div>
+            @if (n.status === 'UNREAD') {
+              <button class="btn-read" (click)="markRead(n.notificationId)">Mark Read</button>
+            }
+          </div>
+        }
+        @empty { <p class="empty">No notifications</p> }
+      </div>
+    }
+  </main>
+</div>

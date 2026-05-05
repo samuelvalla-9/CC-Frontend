@@ -1,0 +1,202 @@
+<app-navbar></app-navbar>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <nav>
+      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+        <span>📊</span> Overview
+      </button>
+      <button [class.active]="activeTab==='records'" (click)="activeTab='records'">
+        <span>📋</span> Compliance Records
+      </button>
+      <button [class.active]="activeTab==='createRecord'" (click)="activeTab='createRecord'">
+        <span>➕</span> Create Record
+      </button>
+      <button [class.active]="activeTab==='audits'" (click)="activeTab='audits'">
+        <span>🔍</span> Audits
+      </button>
+      <button [class.active]="activeTab==='initiateAudit'" (click)="activeTab='initiateAudit'">
+        <span>🚀</span> Initiate Audit
+      </button>
+      <button [class.active]="activeTab==='logs'" (click)="activeTab='logs'">
+        <span>📜</span> Audit Logs
+      </button>
+      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+        <span>🔔</span> Notifications
+        @if (unreadCount > 0) { 
+          <span class="badge">{{ unreadCount }}</span> 
+        }
+      </button>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    @if (activeTab === 'overview') {
+      <div class="page-header">
+        <h2>Compliance Officer Console</h2>
+        <p>Compliance records, audit initiation, audit logs and policy monitoring</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card red">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ complianceRecords.length }}</span>
+            <span class="stat-label">Compliance Records</span>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">🔍</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ audits.length }}</span>
+            <span class="stat-label">Audits</span>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">📜</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ auditLogs.length }}</span>
+            <span class="stat-label">Audit Logs</span>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">🔔</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ unreadCount }}</span>
+            <span class="stat-label">Unread Alerts</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'records') {
+      <div class="page-header"><h2>Compliance Records</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Entity ID</th><th>Type</th><th>Result</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (r of complianceRecords; track r.complianceId) {
+              <tr>
+                <td>#{{ r.complianceId }}</td>
+                <td>{{ r.entityId }}</td>
+                <td>{{ r.type }}</td>
+                <td>{{ r.result }}</td>
+                <td>{{ r.date | date }}</td>
+                <td><span class="status-badge" [class]="r.status?.toLowerCase()">{{ r.status }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty">No records</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'createRecord') {
+      <div class="page-header"><h2>Create Compliance Record</h2></div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="createRecord()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Entity ID</label>
+              <input type="number" [(ngModel)]="recordForm.entityId" name="entityId" placeholder="Entity ID" required />
+            </div>
+            <div class="form-group">
+              <label>Entity Type</label>
+              <select [(ngModel)]="recordForm.type" name="type">
+                @for (t of entityTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Result</label>
+            <input type="text" [(ngModel)]="recordForm.result" name="result" placeholder="Compliance result" required />
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea [(ngModel)]="recordForm.notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
+          </div>
+          <button type="submit" class="btn-primary">📋 Create Record</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'audits') {
+      <div class="page-header"><h2>Audits</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Officer ID</th><th>Scope</th><th>Findings</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (a of audits; track a.auditId) {
+              <tr>
+                <td>#{{ a.auditId }}</td>
+                <td>{{ a.officerId }}</td>
+                <td>{{ a.scope }}</td>
+                <td>{{ a.findings }}</td>
+                <td>{{ a.date | date }}</td>
+                <td><span class="status-badge" [class]="a.status?.toLowerCase()">{{ a.status }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty">No audits</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'initiateAudit') {
+      <div class="page-header"><h2>Initiate Audit</h2></div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="initiateAudit()">
+          <div class="form-group">
+            <label>Scope</label>
+            <input type="text" [(ngModel)]="auditForm.scope" name="scope" placeholder="e.g. Facility compliance Q1" required />
+          </div>
+          <div class="form-group">
+            <label>Initial Findings</label>
+            <textarea [(ngModel)]="auditForm.findings" name="findings" rows="4" placeholder="Describe initial findings..."></textarea>
+          </div>
+          <button type="submit" class="btn-primary">🚀 Initiate Audit</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'logs') {
+      <div class="page-header"><h2>Audit Logs</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>User ID</th><th>Action</th><th>Resource</th><th>Timestamp</th></tr></thead>
+          <tbody>
+            @for (l of auditLogs; track l.auditId) {
+              <tr>
+                <td>#{{ l.auditId }}</td>
+                <td>{{ l.userId }}</td>
+                <td>{{ l.action }}</td>
+                <td>{{ l.resource }}</td>
+                <td>{{ l.timestamp | date:'medium' }}</td>
+              </tr>
+            }
+            @empty { <tr><td colspan="5" class="empty">No logs</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'notifications') {
+      <div class="page-header"><h2>Notifications</h2></div>
+      <div class="notifications-list">
+        @for (n of notifications; track n.notificationId) {
+          <div class="notification-item" [class.unread]="n.status==='UNREAD'">
+            <div class="notif-content">
+              <span class="notif-category">{{ n.category }}</span>
+              <p>{{ n.message }}</p>
+              <small>{{ n.createdDate | date:'medium' }}</small>
+            </div>
+          </div>
+        }
+        @empty { <p class="empty">No notifications</p> }
+      </div>
+    }
+
+  </main>
+</div>

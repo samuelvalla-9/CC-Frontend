@@ -1,0 +1,162 @@
+<app-navbar></app-navbar>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <nav>
+      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+        <span>📊</span> Overview
+      </button>
+      <button [class.active]="activeTab==='pending'" (click)="activeTab='pending'; loadPending()">
+        <span>🚨</span> Pending Emergencies
+        @if (pendingEmergencies.length > 0) { 
+          <span class="badge">{{ pendingEmergencies.length }}</span> 
+        }
+      </button>
+      <button [class.active]="activeTab==='dispatch'" (click)="activeTab='dispatch'">
+        <span>🚑</span> Dispatch Ambulance
+      </button>
+      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+        <span>🔔</span> Notifications
+        @if (unreadCount > 0) { 
+          <span class="badge">{{ unreadCount }}</span> 
+        }
+      </button>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    @if (activeTab === 'overview') {
+      <div class="page-header">
+        <h2>Dispatcher Console</h2>
+        <p>Monitor and respond to emergency incidents</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" 
+             [ngClass]="pendingEmergencies.length > 0 ? 'red' : ''"
+             (click)="activeTab='pending'; loadPending()" 
+             style="cursor:pointer">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ pendingEmergencies.length }}</span>
+            <span class="stat-label">Pending Emergencies</span>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">🔔</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ unreadCount }}</span>
+            <span class="stat-label">Unread Alerts</span>
+          </div>
+        </div>
+      </div>
+
+      @if (pendingEmergencies.length > 0) {
+        <div class="page-header" style="margin-top:1.5rem">
+          <h2>Active Queue</h2>
+        </div>
+        <div class="emergency-queue">
+          @for (e of pendingEmergencies; track e.emergencyId) {
+            <div class="emergency-card">
+              <div class="emergency-header">
+                <span class="priority-badge">🚨 {{ e.type }}</span>
+                <span class="status-badge pending">PENDING</span>
+              </div>
+              <div class="emergency-body">
+                <p><strong>📍 Location:</strong> {{ e.location }}</p>
+                <p><strong>👤 Citizen ID:</strong> {{ e.citizenId }}</p>
+                <p><strong>🕐 Reported:</strong> {{ e.date | date:'medium' }}</p>
+              </div>
+              <div class="emergency-actions">
+                <button class="btn-primary" (click)="dispatch(e)">🚑 Dispatch</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @if (activeTab === 'pending') {
+      <div class="page-header">
+        <h2>Pending Emergencies</h2>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Type</th><th>Location</th><th>Citizen</th><th>Date</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            @for (e of pendingEmergencies; track e.emergencyId) {
+              <tr>
+                <td>#{{ e.emergencyId }}</td>
+                <td><span class="type-tag">{{ e.type }}</span></td>
+                <td>{{ e.location }}</td>
+                <td>{{ e.citizenId }}</td>
+                <td>{{ e.date | date:'short' }}</td>
+                <td><button class="btn-primary" (click)="dispatch(e)">🚑 Dispatch</button></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty">No pending emergencies</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'dispatch') {
+      <div class="page-header">
+        <h2>Dispatch Ambulance</h2>
+      </div>
+      <div class="form-card">
+        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+        <form (ngSubmit)="submitDispatch()">
+          <div class="form-group">
+            <label>Emergency ID</label>
+            <input type="number" [(ngModel)]="dispatchForm.emergencyId" name="emergencyId" placeholder="Emergency ID" required readonly />
+          </div>
+          <div class="form-group">
+            <label>Select Ambulance</label>
+            <select [(ngModel)]="dispatchForm.ambulanceId" name="ambulanceId" required>
+              <option value="">-- Select Available Ambulance --</option>
+              @for (ambulance of availableAmbulances; track ambulance.ambulanceId) {
+                <option [value]="ambulance.ambulanceId">
+                  {{ ambulance.vehicleNumber }}@if (ambulance.model) { ({{ ambulance.model }})}@if (ambulance.facilityId) { - Facility #{{ ambulance.facilityId }}}
+                </option>
+              }
+            </select>
+            @if (availableAmbulances.length === 0) {
+              <small style="color: #dc2626; font-weight: 600; margin-top: 0.5rem; display: block;">
+                ⚠️ No ambulances available at the moment
+              </small>
+            }
+          </div>
+          <button type="submit" class="btn-primary" [disabled]="!dispatchForm.ambulanceId || availableAmbulances.length === 0">🚑 Dispatch Ambulance</button>
+        </form>
+      </div>
+    }
+
+    @if (activeTab === 'notifications') {
+      <div class="page-header">
+        <h2>Notifications</h2>
+        @if (unreadCount > 0) {
+          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto">✓ Mark All Read</button>
+        }
+      </div>
+      <div class="notifications-list">
+        @for (n of notifications; track n.notificationId) {
+          <div class="notification-item" [class.unread]="n.status==='UNREAD'">
+            <div class="notif-content">
+              <span class="notif-category">{{ n.category }}</span>
+              <p>{{ n.message }}</p>
+              <small>{{ n.createdDate | date:'medium' }}</small>
+            </div>
+            @if (n.status === 'UNREAD') {
+              <button class="btn-read" (click)="markRead(n.notificationId)">Mark Read</button>
+            }
+          </div>
+        }
+        @empty { <p class="empty">No notifications</p> }
+      </div>
+    }
+
+  </main>
+</div>

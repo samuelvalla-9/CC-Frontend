@@ -1,0 +1,186 @@
+<app-navbar></app-navbar>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <nav>
+      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+        <span>📊</span> Overview
+      </button>
+      <button [class.active]="activeTab==='facilities'" (click)="activeTab='facilities'">
+        <span>🏥</span> Facility Reports
+      </button>
+      <button [class.active]="activeTab==='emergencies'" (click)="activeTab='emergencies'">
+        <span>🚨</span> Emergency Reports
+      </button>
+      <button [class.active]="activeTab==='patients'" (click)="activeTab='patients'">
+        <span>🛏️</span> Patient Reports
+      </button>
+      <button [class.active]="activeTab==='compliance'" (click)="activeTab='compliance'">
+        <span>📋</span> Compliance Tracking
+      </button>
+      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+        <span>🔔</span> Notifications
+        @if (unreadCount > 0) { 
+          <span class="badge">{{ unreadCount }}</span> 
+        }
+      </button>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    @if (activeTab === 'overview') {
+      <div class="page-header">
+        <h2>City Health Officer Workbench</h2>
+        <p>Program monitoring, compliance tracking, analytics and reporting</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cyan">
+          <div class="stat-icon">🏥</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ facilityReports.length }}</span>
+            <span class="stat-label">Facility Reports</span>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ emergencyReports.length }}</span>
+            <span class="stat-label">Emergency Reports</span>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🛏️</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ patientReports.length }}</span>
+            <span class="stat-label">Patient Reports</span>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <span class="stat-value">{{ complianceRecords.length }}</span>
+            <span class="stat-label">Compliance Records</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-section">
+        <h3>Key Performance Indicators</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Emergency Response Rate</div>
+            <div class="kpi-bar"><div class="kpi-fill" style="width:78%; background:#0ea5e9"></div></div>
+            <div class="kpi-value">78%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Patient Recovery Rate</div>
+            <div class="kpi-bar"><div class="kpi-fill" style="width:85%; background:#10b981"></div></div>
+            <div class="kpi-value">85%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Compliance Adherence</div>
+            <div class="kpi-bar"><div class="kpi-fill" style="width:92%; background:#8b5cf6"></div></div>
+            <div class="kpi-value">92%</div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab === 'facilities') {
+      <div class="page-header"><h2>Facility Reports</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <tbody>
+            @for (r of facilityReports; track $index) {
+              <tr>
+                <td>{{ r.scope || 'Facility' }}</td>
+                <td>{{ r.metrics || r.facilityCount || '-' }}</td>
+                <td>{{ r.generatedDate | date:'medium' }}</td>
+              </tr>
+            }
+            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'emergencies') {
+      <div class="page-header"><h2>Emergency Reports</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <tbody>
+            @for (r of emergencyReports; track $index) {
+              <tr>
+                <td>{{ r.scope || 'Emergency' }}</td>
+                <td>{{ r.metrics || r.totalCount || '-' }}</td>
+                <td>{{ r.generatedDate | date:'medium' }}</td>
+              </tr>
+            }
+            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'patients') {
+      <div class="page-header"><h2>Patient Reports</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <tbody>
+            @for (r of patientReports; track $index) {
+              <tr>
+                <td>{{ r.scope || 'Patient' }}</td>
+                <td>{{ r.metrics || r.admittedCount || '-' }}</td>
+                <td>{{ r.generatedDate | date:'medium' }}</td>
+              </tr>
+            }
+            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'compliance') {
+      <div class="page-header"><h2>Compliance Tracking</h2></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>ID</th><th>Entity ID</th><th>Type</th><th>Result</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (c of complianceRecords; track c.complianceId) {
+              <tr>
+                <td>#{{ c.complianceId }}</td>
+                <td>{{ c.entityId }}</td>
+                <td>{{ c.type }}</td>
+                <td>{{ c.result }}</td>
+                <td>{{ c.date | date }}</td>
+                <td><span class="status-badge" [class]="c.status.toLowerCase()">{{ c.status }}</span></td>
+              </tr>
+            }
+            @empty { <tr><td colspan="6" class="empty">No compliance records</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (activeTab === 'notifications') {
+      <div class="page-header"><h2>Notifications</h2></div>
+      <div class="notifications-list">
+        @for (n of notifications; track n.notificationId) {
+          <div class="notification-item" [class.unread]="n.status==='UNREAD'">
+            <div class="notif-content">
+              <span class="notif-category">{{ n.category }}</span>
+              <p>{{ n.message }}</p>
+              <small>{{ n.createdDate | date:'medium' }}</small>
+            </div>
+          </div>
+        }
+        @empty { <p class="empty">No notifications</p> }
+      </div>
+    }
+
+  </main>
+</div>

@@ -1,0 +1,87 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { AuthResponse, User, Role } from '../../models/user.model';
+
+// Shape the backend actually returns inside ApiResponse.data
+interface BackendAuthData {
+  token: string;
+  userId: number;
+  name: string;
+  email: string;
+  role: Role;
+}
+
+interface BackendApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private readonly API = 'http://localhost:9090';
+  private userSubject = new BehaviorSubject<User | null>(this.loadUser());
+  user$ = this.userSubject.asObservable();
+
+  constructor(private http: HttpClient, private router: Router) {}
+
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http.post<BackendApiResponse<BackendAuthData>>(`${this.API}/auth/login`, { email, password }).pipe(
+      map(res => this.normalise(res.data)),
+      tap(res => this.persist(res))
+    );
+  }
+
+  register(data: any): Observable<AuthResponse> {
+    return this.http.post<BackendApiResponse<BackendAuthData>>(`${this.API}/auth/register`, data).pipe(
+      map(res => this.normalise(res.data)),
+      tap(res => this.persist(res))
+    );
+  }
+
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    this.userSubject.next(null);
+    this.router.navigate(['/login']);
+  }
+
+  getToken(): string | null { return localStorage.getItem('token'); }
+  getUser(): User | null { return this.userSubject.value; }
+  isLoggedIn(): boolean { return !!this.getToken(); }
+  hasRole(role: Role): boolean { return this.getUser()?.role === role; }
+
+  redirectByRole() {
+    const role = this.getUser()?.role;
+    const routes: Partial<Record<Role, string>> = {
+      CITIZEN: '/citizen',
+      DOCTOR: '/doctor',
+      NURSE: '/nurse',
+      DISPATCHER: '/dispatcher',
+      ADMIN: '/admin',
+      CITY_HEALTH_OFFICER: '/officer',
+      COMPLIANCE_OFFICER: '/compliance',
+    };
+    this.router.navigate([routes[role!] ?? '/login']);
+  }
+
+  private normalise(data: BackendAuthData): AuthResponse {
+    return {
+      token: data.token,
+      user: { id: data.userId, userId: data.userId, name: data.name, email: data.email, role: data.role }
+    };
+  }
+
+  private persist(res: AuthResponse) {
+    localStorage.setItem('token', res.token);
+    localStorage.setItem('user', JSON.stringify(res.user));
+    this.userSubject.next(res.user);
+  }
+
+  private loadUser(): User | null {
+    const u = localStorage.getItem('user');
+    return u ? JSON.parse(u) : null;
+  }
+}

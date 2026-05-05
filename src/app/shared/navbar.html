@@ -1,0 +1,28 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <a href="/" class="navbar-brand">
+      <span class="navbar-logo">🏥</span>
+      <div>
+        <h1 class="navbar-title">CityCare</h1>
+        <p class="navbar-subtitle">Emergency Healthcare</p>
+      </div>
+    </a>
+    
+    <div class="navbar-user">
+      @if (user$ | async; as user) {
+        <div class="user-info">
+          <div class="user-avatar">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="user-details">
+            <span class="user-name">{{ user.name }}</span>
+            <span class="user-role">{{ user.role.replace('_', ' ') }}</span>
+          </div>
+        </div>
+        <button class="btn-secondary" (click)="logout()">
+          <span>🚪</span> Logout
+        </button>
+      }
+    </div>
+  </div>
+</nav>
