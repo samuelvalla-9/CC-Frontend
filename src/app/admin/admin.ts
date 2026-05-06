@@ -15,6 +15,7 @@ import { Patient } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-admin',
@@ -78,12 +79,21 @@ export class AdminDashboard implements OnInit {
     private ambulanceService: AmbulanceService,
     private verificationService: VerificationService,
     private cdr: ChangeDetectorRef,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.pendingCount$ = this.verificationService.pendingCount$;
   }
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadFacilities();
     this.loadUsers();
     this.loadPatients();
@@ -96,6 +106,21 @@ export class AdminDashboard implements OnInit {
       this.pendingDocuments = citizens;
       this.cdr.markForCheck();
     });
+  }
+
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'notifications') this.loadNotifications();
+    if (tab === 'patientsManagement') this.loadPatients();
+    if (tab === 'admitPatient') this.loadDispatchedEmergencies();
+    if (tab === 'pendingDocs') this.loadPendingVerifications();
   }
 
   loadFacilities() {
@@ -480,7 +505,7 @@ export class AdminDashboard implements OnInit {
   }
 
   navigateToPendingDocs() {
-    this.activeTab = 'pendingDocs';
+    this.setTab('pendingDocs');
     this.loadPendingVerifications();
   }
 

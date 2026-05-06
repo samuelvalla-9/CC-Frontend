@@ -1,18 +1,18 @@
 <app-navbar></app-navbar>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span>📊</span> Overview
       </button>
-      <button [class.active]="activeTab==='patients'" (click)="activeTab='patients'">
+      <button [class.active]="activeTab==='patients'" (click)="setTab('patients')">
         <span>🧑‍⚕️</span> My Patients
       </button>
-      <button [class.active]="activeTab==='myTreatments'" (click)="activeTab='myTreatments'">
+      <button [class.active]="activeTab==='myTreatments'" (click)="setTab('myTreatments')">
         <span>📋</span> My Treatments
       </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
         <span>🔔</span> Notifications
         @if (unreadCount > 0) { 
           <span class="badge">{{ unreadCount }}</span> 
@@ -29,28 +29,28 @@
         <p>Manage patients and treatment records</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card green">
+        <div class="stat-card green card-interactive" (click)="setTab('patients')">
           <div class="stat-icon">🧑‍⚕️</div>
           <div class="stat-info">
             <span class="stat-value">{{ patients.length }}</span>
             <span class="stat-label">Total Patients</span>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue card-interactive" (click)="setTab('patients')">
           <div class="stat-icon">🏥</div>
           <div class="stat-info">
             <span class="stat-value">{{ admittedCount }}</span>
             <span class="stat-label">Admitted</span>
           </div>
         </div>
-        <div class="stat-card purple">
+        <div class="stat-card purple card-interactive" (click)="setTab('myTreatments')">
           <div class="stat-icon">💊</div>
           <div class="stat-info">
             <span class="stat-value">{{ myTreatments.length }}</span>
             <span class="stat-label">My Treatments</span>
           </div>
         </div>
-        <div class="stat-card yellow">
+        <div class="stat-card yellow card-interactive" (click)="setTab('notifications')">
           <div class="stat-icon">🔔</div>
           <div class="stat-info">
             <span class="stat-value">{{ unreadCount }}</span>

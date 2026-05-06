@@ -8,6 +8,7 @@ import { PatientService, TreatmentService, TreatmentRequest } from '../services/
 import { NotificationService } from '../services/notification.service';
 import { Patient, Treatment, PatientStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-doctor',
@@ -48,13 +49,36 @@ export class DoctorDashboard implements OnInit {
     private notificationService: NotificationService,
     private auth: AuthService,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadPatients();
     this.loadMyTreatments();
     this.loadNotifications();
+  }
+
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'patients') this.loadPatients();
+    if (tab === 'myTreatments') this.loadMyTreatments();
+    if (tab === 'notifications') this.loadNotifications();
   }
 
   loadPatients() {

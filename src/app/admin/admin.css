@@ -31,16 +31,12 @@
   background: linear-gradient(135deg, #6b21a8 0%, #581c87 100%);
 }
 
-.stat-card.purple .stat-icon {
-  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+.stat-card.purple::after {
+  background: linear-gradient(135deg, #7c3aed, #6b21a8);
 }
 
-.stat-card.blue .stat-icon {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-}
-
-.stat-card::before {
-  background: linear-gradient(90deg, #7c3aed, #6b21a8);
+.stat-card.blue::after {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 
 input:focus, select:focus, textarea:focus {
@@ -110,121 +106,48 @@ tbody tr:hover {
   background: #faf5ff;
 }
 
-/* Document verification status badges */
-.status-badge.verified { 
-  background: #d1fae5; 
-  color: #065f46; 
-}
-
-.status-badge.rejected { 
-  background: #fee2e2; 
-  color: #991b1b; 
-}
-
-/* Orange stat card for pending verifications */
-.stat-card.orange { 
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); 
-}
-
-.stat-card.orange .stat-icon {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-}
-
-/* Success and danger buttons */
+/* Success and danger buttons override for admin theme */
 .btn-success {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
 }
 
 .btn-danger {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
 }
 
-.btn-danger:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-}
-
-/* Loading spinner */
-.loading-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  margin-top: 1.5rem;
-}
-
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #f3e8ff;
+/* Patient Detail View */
+.detail-card {
   border-top: 4px solid #7c3aed;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-spinner p {
-  margin-top: 1rem;
+.detail-card h3 {
   color: #6b21a8;
-  font-weight: 600;
 }
 
-/* Document preview */
-.document-preview {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.emergency-card {
+  border-top: 4px solid #ef4444;
 }
 
-.document-preview h3 {
+.emergency-card h3 {
+  color: #dc2626;
+}
+
+.section-header h3 {
   color: #6b21a8;
-  margin-bottom: 1rem;
 }
 
-/* Clickable stat card */
-.stat-card[style*="cursor:pointer"]:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
+.treatment-id {
+  color: #6b21a8;
 }
 
-/* Badge styling for sidebar */
-.sidebar button .badge {
-  margin-left: auto;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  animation: pulse 2s ease-in-out infinite;
+.btn-read {
+  background: #7c3aed;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
+.btn-read:hover {
+  background: #6b21a8;
 }
 
-/* Green stat card for no pending verifications */
-.stat-card.green {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.stat-card.green .stat-icon {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-}
 
 /* ============================================
    Notifications List

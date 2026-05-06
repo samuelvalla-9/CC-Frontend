@@ -1,28 +1,28 @@
 <app-navbar></app-navbar>
 <app-toast></app-toast>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span>📊</span> Overview
       </button>
-      <button [class.active]="activeTab==='profile'" (click)="activeTab='profile'; loadProfile()">
+      <button [class.active]="activeTab==='profile'" (click)="setTab('profile')">
         <span>👤</span> My Profile
       </button>
-      <button [class.active]="activeTab==='documents'" (click)="activeTab='documents'; loadDocuments()">
+      <button [class.active]="activeTab==='documents'" (click)="setTab('documents')">
         <span>📄</span> Documents
         @if (pendingDocsCount > 0) { 
           <span class="badge">{{ pendingDocsCount }}</span> 
         }
       </button>
-      <button [class.active]="activeTab==='report'" (click)="activeTab='report'">
+      <button [class.active]="activeTab==='report'" (click)="setTab('report')">
         <span>🚨</span> Report Emergency
       </button>
-      <button [class.active]="activeTab==='emergencies'" (click)="activeTab='emergencies'">
+      <button [class.active]="activeTab==='emergencies'" (click)="setTab('emergencies')">
         <span>📋</span> My Emergencies
       </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
         <span>🔔</span> Notifications
         @if (unreadCount > 0) { 
           <span class="badge">{{ unreadCount }}</span> 
@@ -38,38 +38,37 @@
         <p>Manage your healthcare services and emergencies</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card blue">
+        <div class="stat-card blue card-interactive" (click)="setTab('emergencies')">
           <div class="stat-icon">🚨</div>
           <div class="stat-info">
             <span class="stat-value">{{ emergencies.length }}</span>
             <span class="stat-label">Total Emergencies</span>
           </div>
         </div>
-        <div class="stat-card red">
+        <div class="stat-card red card-interactive" (click)="setTab('emergencies')">
           <div class="stat-icon">⏳</div>
           <div class="stat-info">
             <span class="stat-value">{{ pendingCount }}</span>
             <span class="stat-label">Pending</span>
           </div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green card-interactive" (click)="setTab('emergencies')">
           <div class="stat-icon">✅</div>
           <div class="stat-info">
             <span class="stat-value">{{ resolvedCount }}</span>
             <span class="stat-label">Resolved</span>
           </div>
         </div>
-        <div class="stat-card yellow">
+        <div class="stat-card yellow card-interactive" (click)="setTab('notifications')">
           <div class="stat-icon">🔔</div>
           <div class="stat-info">
             <span class="stat-value">{{ unreadCount }}</span>
             <span class="stat-label">Unread Alerts</span>
           </div>
         </div>
-        <div class="stat-card" 
+        <div class="stat-card card-interactive" 
              [ngClass]="pendingDocsCount > 0 ? 'orange' : ''"
-             (click)="activeTab='documents'; loadDocuments()" 
-             style="cursor:pointer">
+             (click)="setTab('documents')">
           <div class="stat-icon">📄</div>
           <div class="stat-info">
             <span class="stat-value">{{ documents.length }}</span>

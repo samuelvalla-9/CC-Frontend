@@ -1,27 +1,27 @@
 <app-navbar></app-navbar>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span>📊</span> Overview
       </button>
-      <button [class.active]="activeTab==='facilities'" (click)="activeTab='facilities'">
+      <button [class.active]="activeTab==='facilities'" (click)="setTab('facilities')">
         <span>🏥</span> Facilities
       </button>
-      <button [class.active]="activeTab==='addFacility'" (click)="activeTab='addFacility'">
+      <button [class.active]="activeTab==='addFacility'" (click)="setTab('addFacility')">
         <span>➕</span> Add Facility
       </button>
-      <button [class.active]="activeTab==='addUser'" (click)="activeTab='addUser'">
+      <button [class.active]="activeTab==='addUser'" (click)="setTab('addUser')">
         <span>👤</span> Add User
       </button>
-      <button [class.active]="activeTab==='ambulances'" (click)="activeTab='ambulances'">
+      <button [class.active]="activeTab==='ambulances'" (click)="setTab('ambulances')">
         <span>🚑</span> Ambulances
       </button>
-      <button [class.active]="activeTab==='users'" (click)="activeTab='users'">
+      <button [class.active]="activeTab==='users'" (click)="setTab('users')">
         <span>🔑</span> User Management
       </button>
-      <button [class.active]="activeTab==='patientsManagement'" (click)="activeTab='patientsManagement'; loadPatients()">
+      <button [class.active]="activeTab==='patientsManagement'" (click)="setTab('patientsManagement')">
         <span>🏥</span> Patients Management
       </button>
       <button [class.active]="activeTab==='pendingDocs'" (click)="navigateToPendingDocs()">
@@ -30,13 +30,13 @@
           <span class="badge">{{ pendingCount$ | async }}</span> 
         }
       </button>
-      <button [class.active]="activeTab==='admitPatient'" (click)="activeTab='admitPatient'; loadDispatchedEmergencies()">
+      <button [class.active]="activeTab==='admitPatient'" (click)="setTab('admitPatient')">
         <span>🛏️</span> Admit Patient
         @if (dispatchedEmergencies.length > 0) { 
           <span class="badge">{{ dispatchedEmergencies.length }}</span> 
         }
       </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'; loadNotifications()">
+      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
         <span>🔔</span> Notifications
         @if (unreadCount > 0) { 
           <span class="badge">{{ unreadCount }}</span> 
@@ -53,48 +53,46 @@
         <p>Manage facilities, staff, ambulances and patients</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card purple">
+        <div class="stat-card purple card-interactive" (click)="setTab('facilities')">
           <div class="stat-icon">🏥</div>
           <div class="stat-info">
             <span class="stat-value">{{ facilities.length }}</span>
             <span class="stat-label">Facilities</span>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue card-interactive" (click)="setTab('users')">
           <div class="stat-icon">👥</div>
           <div class="stat-info">
             <span class="stat-value">{{ users.length }}</span>
             <span class="stat-label">Registered Users</span>
           </div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green card-interactive" (click)="setTab('patientsManagement')">
           <div class="stat-icon">🛏️</div>
           <div class="stat-info">
             <span class="stat-value">{{ patients.length }}</span>
             <span class="stat-label">Patients</span>
           </div>
         </div>
-        <div class="stat-card yellow">
+        <div class="stat-card yellow card-interactive" (click)="setTab('ambulances')">
           <div class="stat-icon">🚑</div>
           <div class="stat-info">
             <span class="stat-value">{{ ambulances.length }}</span>
             <span class="stat-label">Ambulances</span>
           </div>
         </div>
-        <div class="stat-card" 
+        <div class="stat-card card-interactive" 
              [ngClass]="dispatchedEmergencies.length > 0 ? 'green' : ''"
-             (click)="activeTab='admitPatient'; loadDispatchedEmergencies()" 
-             style="cursor:pointer">
+             (click)="setTab('admitPatient')">
           <div class="stat-icon">🚨</div>
           <div class="stat-info">
             <span class="stat-value">{{ dispatchedEmergencies.length }}</span>
             <span class="stat-label">Awaiting Admission</span>
           </div>
         </div>
-        <div class="stat-card" 
+        <div class="stat-card card-interactive" 
              [ngClass]="((pendingCount$ | async) ?? 0) > 0 ? 'orange' : ''" 
-             (click)="navigateToPendingDocs()" 
-             style="cursor:pointer">
+             (click)="navigateToPendingDocs()">
           <div class="stat-icon">📄</div>
           <div class="stat-info">
             <span class="stat-value">{{ pendingCount$ | async }}</span>

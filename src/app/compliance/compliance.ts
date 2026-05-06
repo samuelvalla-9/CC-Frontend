@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Navbar } from '../shared/navbar';
 import { AuthService } from '../services/auth.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-compliance',
@@ -29,13 +30,40 @@ export class ComplianceDashboard implements OnInit {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
   }
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(
+    private http: HttpClient, 
+    private auth: AuthService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadRecords();
     this.loadAudits();
     this.loadLogs();
     this.loadNotifications();
+  }
+
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'records') this.loadRecords();
+    if (tab === 'audits') this.loadAudits();
+    if (tab === 'logs') this.loadLogs();
+    if (tab === 'notifications') this.loadNotifications();
   }
 
   loadRecords() {

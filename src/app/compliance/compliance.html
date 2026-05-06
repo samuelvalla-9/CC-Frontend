@@ -1,27 +1,27 @@
 <app-navbar></app-navbar>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span>📊</span> Overview
       </button>
-      <button [class.active]="activeTab==='records'" (click)="activeTab='records'">
+      <button [class.active]="activeTab==='records'" (click)="setTab('records')">
         <span>📋</span> Compliance Records
       </button>
-      <button [class.active]="activeTab==='createRecord'" (click)="activeTab='createRecord'">
+      <button [class.active]="activeTab==='createRecord'" (click)="setTab('createRecord')">
         <span>➕</span> Create Record
       </button>
-      <button [class.active]="activeTab==='audits'" (click)="activeTab='audits'">
+      <button [class.active]="activeTab==='audits'" (click)="setTab('audits')">
         <span>🔍</span> Audits
       </button>
-      <button [class.active]="activeTab==='initiateAudit'" (click)="activeTab='initiateAudit'">
+      <button [class.active]="activeTab==='initiateAudit'" (click)="setTab('initiateAudit')">
         <span>🚀</span> Initiate Audit
       </button>
-      <button [class.active]="activeTab==='logs'" (click)="activeTab='logs'">
+      <button [class.active]="activeTab==='logs'" (click)="setTab('logs')">
         <span>📜</span> Audit Logs
       </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
         <span>🔔</span> Notifications
         @if (unreadCount > 0) { 
           <span class="badge">{{ unreadCount }}</span> 
@@ -38,28 +38,28 @@
         <p>Compliance records, audit initiation, audit logs and policy monitoring</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card red">
+        <div class="stat-card red card-interactive" (click)="setTab('records')">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
             <span class="stat-value">{{ complianceRecords.length }}</span>
             <span class="stat-label">Compliance Records</span>
           </div>
         </div>
-        <div class="stat-card purple">
+        <div class="stat-card purple card-interactive" (click)="setTab('audits')">
           <div class="stat-icon">🔍</div>
           <div class="stat-info">
             <span class="stat-value">{{ audits.length }}</span>
             <span class="stat-label">Audits</span>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue card-interactive" (click)="setTab('logs')">
           <div class="stat-icon">📜</div>
           <div class="stat-info">
             <span class="stat-value">{{ auditLogs.length }}</span>
             <span class="stat-label">Audit Logs</span>
           </div>
         </div>
-        <div class="stat-card yellow">
+        <div class="stat-card yellow card-interactive" (click)="setTab('notifications')">
           <div class="stat-icon">🔔</div>
           <div class="stat-info">
             <span class="stat-value">{{ unreadCount }}</span>

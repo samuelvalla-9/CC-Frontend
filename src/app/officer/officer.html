@@ -1,24 +1,24 @@
 <app-navbar></app-navbar>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span>📊</span> Overview
       </button>
-      <button [class.active]="activeTab==='facilities'" (click)="activeTab='facilities'">
+      <button [class.active]="activeTab==='facilities'" (click)="setTab('facilities')">
         <span>🏥</span> Facility Reports
       </button>
-      <button [class.active]="activeTab==='emergencies'" (click)="activeTab='emergencies'">
+      <button [class.active]="activeTab==='emergencies'" (click)="setTab('emergencies')">
         <span>🚨</span> Emergency Reports
       </button>
-      <button [class.active]="activeTab==='patients'" (click)="activeTab='patients'">
+      <button [class.active]="activeTab==='patients'" (click)="setTab('patients')">
         <span>🛏️</span> Patient Reports
       </button>
-      <button [class.active]="activeTab==='compliance'" (click)="activeTab='compliance'">
+      <button [class.active]="activeTab==='compliance'" (click)="setTab('compliance')">
         <span>📋</span> Compliance Tracking
       </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
+      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
         <span>🔔</span> Notifications
         @if (unreadCount > 0) { 
           <span class="badge">{{ unreadCount }}</span> 
@@ -35,28 +35,28 @@
         <p>Program monitoring, compliance tracking, analytics and reporting</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card cyan">
+        <div class="stat-card blue card-interactive" (click)="setTab('facilities')">
           <div class="stat-icon">🏥</div>
           <div class="stat-info">
             <span class="stat-value">{{ facilityReports.length }}</span>
             <span class="stat-label">Facility Reports</span>
           </div>
         </div>
-        <div class="stat-card red">
+        <div class="stat-card red card-interactive" (click)="setTab('emergencies')">
           <div class="stat-icon">🚨</div>
           <div class="stat-info">
             <span class="stat-value">{{ emergencyReports.length }}</span>
             <span class="stat-label">Emergency Reports</span>
           </div>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green card-interactive" (click)="setTab('patients')">
           <div class="stat-icon">🛏️</div>
           <div class="stat-info">
             <span class="stat-value">{{ patientReports.length }}</span>
             <span class="stat-label">Patient Reports</span>
           </div>
         </div>
-        <div class="stat-card purple">
+        <div class="stat-card purple card-interactive" (click)="setTab('compliance')">
           <div class="stat-icon">📋</div>
           <div class="stat-info">
             <span class="stat-value">{{ complianceRecords.length }}</span>

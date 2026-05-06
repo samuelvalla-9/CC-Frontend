@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Navbar } from '../shared/navbar';
 import { AuthService } from '../services/auth.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 interface Report { reportId: number; scope: string; metrics: string; generatedDate: string; }
 interface ComplianceRecord { complianceId: number; entityId: number; type: string; result: string; date: string; status: string; }
@@ -27,12 +28,38 @@ export class OfficerDashboard implements OnInit {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
   }
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(
+    private http: HttpClient, 
+    private auth: AuthService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadReports();
     this.loadCompliance();
     this.loadNotifications();
+  }
+
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'facilities' || tab === 'emergencies' || tab === 'patients') this.loadReports();
+    if (tab === 'compliance') this.loadCompliance();
+    if (tab === 'notifications') this.loadNotifications();
   }
 
   loadReports() {

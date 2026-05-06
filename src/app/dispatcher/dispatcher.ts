@@ -8,6 +8,7 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 import { Emergency } from '../../models/emergency.model';
 import { Notification } from '../../models/notification.model';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-dispatcher',
@@ -33,13 +34,36 @@ export class DispatcherDashboard implements OnInit {
     private http: HttpClient, 
     private auth: AuthService, 
     private notificationService: NotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadPending();
     this.loadNotifications();
     this.loadAvailableAmbulances();
+  }
+
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'pending') this.loadPending();
+    if (tab === 'notifications') this.loadNotifications();
+    if (tab === 'dispatch') this.loadAvailableAmbulances();
   }
 
   loadPending() {
@@ -96,7 +120,7 @@ export class DispatcherDashboard implements OnInit {
     this.dispatchForm.emergencyId = String(e.emergencyId);
     this.dispatchForm.ambulanceId = ''; // Reset ambulance selection
     this.loadAvailableAmbulances(); // Refresh available ambulances
-    this.activeTab = 'dispatch';
+    this.setTab('dispatch');
   }
 
   submitDispatch() {
@@ -117,7 +141,7 @@ export class DispatcherDashboard implements OnInit {
       .subscribe({
         next: () => { 
           this.dispatchForm = { emergencyId: '', ambulanceId: '' };
-          this.activeTab = 'overview';
+          this.setTab('overview');
           this.loadPending();
           this.loadAvailableAmbulances();
           this.cdr.detectChanges();
