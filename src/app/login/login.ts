@@ -1,35 +1,68 @@
 import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { ToastService } from '../services/toast.service';
+import { ToastComponent } from '../shared/toast';
 import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [ReactiveFormsModule, CommonModule, ToastComponent],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
 export class Login {
   isRegister = false;
-  email = '';
-  password = '';
-  name = '';
-  role = 'CITIZEN';
   error = '';
   loading = false;
 
-  roles = ['CITIZEN'];
+  loginForm: FormGroup;
+  registerForm: FormGroup;
 
-  constructor(private auth: AuthService) {}
+  constructor(private auth: AuthService, private fb: FormBuilder) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required]]
+    });
+
+    this.registerForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(2), Validators.pattern(/^[a-zA-Z\s]+$/)]],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+      role: ['CITIZEN']
+    });
+  }
 
   onSubmit() {
     this.error = '';
-    this.loading = true;
+
     if (this.isRegister) {
-      this.auth.register({ name: this.name, email: this.email, password: this.password, role: this.role })
-        .subscribe({ next: () => this.auth.redirectByRole(), error: e => { this.error = e.error?.message || 'Registration failed'; this.loading = false; } });
+      if (this.registerForm.invalid) {
+        this.registerForm.markAllAsTouched();
+        return;
+      }
+      this.loading = true;
+      this.auth.register(this.registerForm.value)
+        .subscribe({
+          next: () => this.auth.redirectByRole(),
+          error: e => { this.error = e.error?.message || 'Registration failed'; this.loading = false; }
+        });
     } else {
-      this.auth.login(this.email, this.password)
-        .subscribe({ next: () => this.auth.redirectByRole(), error: e => { this.error = e.error?.message || 'Invalid credentials'; this.loading = false; } });
+      if (this.loginForm.invalid) {
+        this.loginForm.markAllAsTouched();
+        return;
+      }
+      this.loading = true;
+      const { email, password } = this.loginForm.value;
+      this.auth.login(email, password)
+        .subscribe({
+          next: () => this.auth.redirectByRole(),
+          error: e => { this.error = e.error?.message || 'Invalid credentials'; this.loading = false; }
+        });
     }
   }
+
+  get f() { return this.loginForm.controls; }
+  get r() { return this.registerForm.controls; }
 }

@@ -42,13 +42,13 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     this.userSubject.next(null);
     this.router.navigate(['/login']);
   }
 
-  getToken(): string | null { return localStorage.getItem('token'); }
+  getToken(): string | null { return sessionStorage.getItem('token'); }
   getUser(): User | null { return this.userSubject.value; }
   isLoggedIn(): boolean { return !!this.getToken(); }
   hasRole(role: Role): boolean { return this.getUser()?.role === role; }
@@ -75,13 +75,13 @@ export class AuthService {
   }
 
   private persist(res: AuthResponse) {
-    localStorage.setItem('token', res.token);
-    localStorage.setItem('user', JSON.stringify(res.user));
+    sessionStorage.setItem('token', res.token);
+    sessionStorage.setItem('user', JSON.stringify(res.user));
     this.userSubject.next(res.user);
   }
 
   private loadUser(): User | null {
-    const u = localStorage.getItem('user');
+    const u = sessionStorage.getItem('user');
     return u ? JSON.parse(u) : null;
   }
 }

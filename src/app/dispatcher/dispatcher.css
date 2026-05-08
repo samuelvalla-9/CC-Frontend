@@ -1,135 +1,63 @@
-/* ============================================
-   Dispatcher Dashboard - Urgent Orange/Red Theme
+
+/* ============================================<
+   Enterprise Dashboard Theme - DISPATCHER
    ============================================ */
 
 @import '../citizen/citizen.css';
 
-/* Override primary colors with orange/red theme */
-.dashboard {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-}
-
 .sidebar button.active {
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-  color: #9a3412;
-}
-
-.sidebar button.active::before {
-  background: #ea580c;
+  background-color: #ffedd5;
+  color: #ea580c;
+  font-weight: 600;
 }
 
 .sidebar button:hover {
-  background: #fff7ed;
-  color: #9a3412;
+  background-color: var(--gray-100);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  background-color: #ea580c;
+  color: white;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
-}
-
-.stat-card.red .stat-icon {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-}
-
-.stat-card.yellow .stat-icon {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-}
-
-.stat-card::before {
-  background: linear-gradient(90deg, #ea580c, #c2410c);
-}
-
-input:focus, select:focus, textarea:focus {
-  border-color: #ea580c;
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+  background-color: #c2410c;
 }
 
 .page-header h2 {
-  color: #9a3412;
+  color: #ea580c;
 }
 
 .notification-item.unread {
-  background: linear-gradient(135deg, #fff7ed 0%, white 100%);
   border-left: 4px solid #ea580c;
+  background-color: #ffedd5;
 }
 
 .btn-read {
-  background: #ea580c;
+  background-color: #ea580c;
+  color: white;
 }
 
 .btn-read:hover {
-  background: #c2410c;
+  background-color: #c2410c;
 }
 
-/* Dispatcher-specific styling */
+.detail-card, .user-management-card, .treatments-card {
+  border-top: 4px solid #ea580c;
+}
+
+.detail-card h3, .section-header h3 {
+  color: #ea580c;
+}
+
 .emergency-card {
-  border-left: 4px solid #dc2626;
-  background: linear-gradient(135deg, white 0%, #fef2f2 100%);
+  border-left: 4px solid #ef4444;
 }
 
-.emergency-card:hover {
-  box-shadow: 0 20px 25px -5px rgba(220, 38, 38, 0.2);
+.emergency-card h3, .emergency-type {
+  color: #ef4444;
 }
+/* Dark Mode Role Overrides */
+:host-context([data-theme="dark"]) .sidebar button.active { color: var(--gray-900) !important; }
 
-.priority-badge {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.9; transform: scale(1.05); }
-}
-
-.dispatch-action {
-  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-  color: white;
-  font-weight: 700;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-lg);
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.dispatch-action:hover {
-  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Badge styling for sidebar */
-.sidebar button .badge {
-  margin-left: auto;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
-}
-
-/* Green stat card for no pending items */
-.stat-card.green {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.stat-card.green .stat-icon {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-}
-
-/* Clickable stat cards */
-.stat-card[style*="cursor:pointer"]:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
-}
+:host-context([data-theme="dark"]) .notification-item.unread { background-color: var(--gray-200) !important; }

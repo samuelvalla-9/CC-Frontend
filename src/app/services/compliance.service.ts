@@ -17,16 +17,15 @@ export class ComplianceService {
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   private get headers() {
-    return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
-  }
-
-  createRecord(request: ComplianceRecordRequest): Observable<ComplianceRecord> {
     const userId = this.auth.getUser()?.id;
-    const headers = new HttpHeaders({
+    return new HttpHeaders({ 
       Authorization: `Bearer ${this.auth.getToken()}`,
       'X-Auth-UserId': userId?.toString() || ''
     });
-    return this.http.post<ApiResponse<ComplianceRecord>>(`${this.API}/records`, request, { headers })
+  }
+
+  createRecord(request: ComplianceRecordRequest): Observable<ComplianceRecord> {
+    return this.http.post<ApiResponse<ComplianceRecord>>(`${this.API}/records`, request, { headers: this.headers })
       .pipe(map(res => res.data));
   }
 

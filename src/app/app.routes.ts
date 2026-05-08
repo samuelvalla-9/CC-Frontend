@@ -10,7 +10,7 @@ import { ComplianceDashboard } from './compliance/compliance';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: Login },
   { path: 'citizen',    component: CitizenDashboard,    canActivate: [authGuard(['CITIZEN'])] },
   { path: 'doctor',     component: DoctorDashboard,     canActivate: [authGuard(['DOCTOR', 'NURSE'])] },
@@ -19,5 +19,5 @@ export const routes: Routes = [
   { path: 'admin',      component: AdminDashboard,      canActivate: [authGuard(['ADMIN'])] },
   { path: 'officer',    component: OfficerDashboard,    canActivate: [authGuard(['CITY_HEALTH_OFFICER'])] },
   { path: 'compliance', component: ComplianceDashboard, canActivate: [authGuard(['COMPLIANCE_OFFICER'])] },
-  { path: '**', redirectTo: 'login' },
+  { path: '**', redirectTo: '/login' },
 ];

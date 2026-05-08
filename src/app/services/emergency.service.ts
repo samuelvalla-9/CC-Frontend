@@ -25,6 +25,11 @@ export class EmergencyService {
       .pipe(map(res => res.data));
   }
 
+  getAllEmergencies(): Observable<Emergency[]> {
+    return this.http.get<ApiResponse<Emergency[]>>(this.API, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
   getMyEmergencies(): Observable<Emergency[]> {
     return this.http.get<ApiResponse<Emergency[]>>(`${this.API}/my`, { headers: this.headers })
       .pipe(map(res => res.data));

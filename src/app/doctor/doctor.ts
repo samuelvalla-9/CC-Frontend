@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -9,17 +9,21 @@ import { NotificationService } from '../services/notification.service';
 import { Patient, Treatment, PatientStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastService } from '../services/toast.service';
+import { ToastComponent } from '../shared/toast';
 
 @Component({
   selector: 'app-doctor',
-  imports: [FormsModule, CommonModule, Navbar, DatePipe],
+  imports: [FormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
   templateUrl: './doctor.html',
   styleUrl: './doctor.css',
 })
 export class DoctorDashboard implements OnInit {
   activeTab = 'overview';
   patients: Patient[] = [];
-  filteredPatients: Patient[] = [];
+  myPatients: Patient[] = [];
+  filteredMyPatients: Patient[] = [];
+  assignedPatientIds: Set<number> = new Set();
   myTreatments: Treatment[] = [];
   notifications: Notification[] = [];
   unreadCount = 0;
@@ -29,15 +33,17 @@ export class DoctorDashboard implements OnInit {
   patientTreatments: Treatment[] = [];
   expandedPatientId: number | null = null;
   showTreatmentForm: number | null = null;
-  statusFilter: PatientStatus | 'ALL' = 'ALL';
-  patientStatusOptions: PatientStatus[] = [PatientStatus.ADMITTED, PatientStatus.UNDER_TREATMENT, PatientStatus.DISCHARGED, PatientStatus.CRITICAL];
+  myPatientsStatusFilter: PatientStatus | 'ALL' = 'ALL';
   patientDoctorMap: Map<number, string> = new Map();
+  statusHighlight = false;
+  private previousTab: string = 'patients';
 
   get admittedCount() { return this.patients.filter(p => p.status === 'ADMITTED').length; }
   get criticalCount() { return this.patients.filter(p => p.status === 'CRITICAL').length; }
 
   treatmentForm: TreatmentRequest = { patientId: 0, description: '', medicationName: '', dosage: '' };
   errorMsg = '';
+  isSubmittingTreatment = false;
 
   private get headers() {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
@@ -51,7 +57,8 @@ export class DoctorDashboard implements OnInit {
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   ngOnInit() {
@@ -77,6 +84,7 @@ export class DoctorDashboard implements OnInit {
 
   private handleTabChange(tab: string) {
     if (tab === 'patients') this.loadPatients();
+    if (tab === 'myPatients') this.loadPatients();
     if (tab === 'myTreatments') this.loadMyTreatments();
     if (tab === 'notifications') this.loadNotifications();
   }
@@ -84,14 +92,34 @@ export class DoctorDashboard implements OnInit {
   loadPatients() {
     this.patientService.getAllPatients().subscribe({
       next: d => {
-        this.patients = d;
-        this.applyFilter();
+        const allPatients = d;
         // Load assigned doctor for each patient
-        this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
-        this.cdr.detectChanges();
+        allPatients.forEach(p => this.loadAssignedDoctor(p.patientId));
+        
+        // Load my treatments to determine which patients are assigned to me
+        const doctorId = this.auth.getUser()?.id;
+        if (doctorId) {
+          this.treatmentService.getTreatmentsByDoctorId(doctorId).subscribe({
+            next: treatments => {
+              this.assignedPatientIds = new Set(treatments.map(t => t.patientId));
+              this.myPatients = allPatients.filter(p => this.assignedPatientIds.has(p.patientId));
+              this.patients = allPatients.filter(p => !this.assignedPatientIds.has(p.patientId));
+              this.applyMyPatientsFilter();
+              this.cdr.detectChanges();
+            },
+            error: () => {
+              this.patients = allPatients;
+              this.myPatients = [];
+              this.cdr.detectChanges();
+            }
+          });
+        } else {
+          this.patients = allPatients;
+          this.cdr.detectChanges();
+        }
       },
       error: (err) => {
-        console.error('Failed to load patients:', err);
+        this.toastService.showError('Failed to load patients');
       }
     });
   }
@@ -105,7 +133,7 @@ export class DoctorDashboard implements OnInit {
         this.myTreatments = d;
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to load treatments:', err)
+      error: (err) => this.toastService.showError('Failed to load treatments')
     });
   }
 
@@ -120,16 +148,16 @@ export class DoctorDashboard implements OnInit {
     });
   }
 
-  applyFilter() {
-    if (this.statusFilter === 'ALL') {
-      this.filteredPatients = [...this.patients];
+  applyMyPatientsFilter() {
+    if (this.myPatientsStatusFilter === 'ALL') {
+      this.filteredMyPatients = [...this.myPatients];
     } else {
-      this.filteredPatients = this.patients.filter(p => p.status === this.statusFilter);
+      this.filteredMyPatients = this.myPatients.filter(p => p.status === this.myPatientsStatusFilter);
     }
   }
 
-  onFilterChange() {
-    this.applyFilter();
+  onMyPatientsFilterChange() {
+    this.applyMyPatientsFilter();
   }
 
   markRead(id: number) {
@@ -147,6 +175,7 @@ export class DoctorDashboard implements OnInit {
   }
 
   togglePatientDetails(patient: Patient) {
+    this.previousTab = this.activeTab;
     this.selectedPatient = patient;
     this.showTreatmentForm = null;
     this.citizenDetails = null;
@@ -154,7 +183,7 @@ export class DoctorDashboard implements OnInit {
     this.loadPatientTreatments(patient.patientId);
     this.loadCitizenDetails(patient.citizenId);
     this.loadEmergencyDetails(patient.emergencyId);
-    this.activeTab = 'patientDetail';
+    this.setTab('patientDetail');
   }
 
   loadPatientTreatments(patientId: number) {
@@ -163,7 +192,7 @@ export class DoctorDashboard implements OnInit {
         this.patientTreatments = d;
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to load treatments:', err)
+      error: (err) => this.toastService.showError('Failed to load treatments')
     });
   }
 
@@ -174,7 +203,7 @@ export class DoctorDashboard implements OnInit {
           this.citizenDetails = d?.data ?? d;
           this.cdr.detectChanges();
         },
-        error: () => console.error('Failed to load citizen details')
+        error: () => this.toastService.showError('Failed to load citizen details')
       });
   }
 
@@ -185,7 +214,7 @@ export class DoctorDashboard implements OnInit {
           this.emergencyDetails = d?.data ?? d;
           this.cdr.detectChanges();
         },
-        error: () => console.error('Failed to load emergency details')
+        error: () => this.toastService.showError('Failed to load emergency details')
       });
   }
 
@@ -205,21 +234,33 @@ export class DoctorDashboard implements OnInit {
   }
 
   submitTreatment() {
+    if (this.isSubmittingTreatment) return;
     if (!this.treatmentForm.description) {
-      this.errorMsg = 'Description is required';
+      this.toastService.showError('Description is required');
       return;
     }
 
+    this.isSubmittingTreatment = true;
     this.treatmentService.addTreatment(this.treatmentForm).subscribe({
       next: () => {
+        this.isSubmittingTreatment = false;
+        this.toastService.showSuccess('Treatment added successfully');
         this.closeTreatmentForm();
         this.loadMyTreatments();
-        this.loadPatientTreatments(this.treatmentForm.patientId);
+        if (this.selectedPatient) {
+          this.loadPatientTreatments(this.selectedPatient.patientId);
+          // Auto-update patient status to UNDER_OBSERVATION
+          if (this.selectedPatient.status === 'ADMITTED') {
+            this.updatePatientStatus(this.selectedPatient.patientId, 'UNDER_OBSERVATION' as PatientStatus);
+          }
+        }
+        this.loadPatients();
         this.errorMsg = '';
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMsg = 'Failed to add treatment: ' + (err.error?.message || err.message);
+        this.isSubmittingTreatment = false;
+        this.toastService.showError(err.error?.message || 'Failed to add treatment');
       }
     });
   }
@@ -227,26 +268,28 @@ export class DoctorDashboard implements OnInit {
   updatePatientStatus(patientId: number, newStatus: PatientStatus) {
     this.patientService.updatePatientStatus(patientId, newStatus).subscribe({
       next: () => {
+        this.toastService.showSuccess('Patient status updated successfully');
         this.loadPatients();
         if (this.selectedPatient?.patientId === patientId) {
           this.selectedPatient.status = newStatus;
         }
-        this.errorMsg = '';
+        this.statusHighlight = true;
         this.cdr.detectChanges();
+        setTimeout(() => { this.statusHighlight = false; this.cdr.detectChanges(); }, 1600);
       },
       error: (err) => {
-        this.errorMsg = 'Failed to update status: ' + (err.error?.message || err.message);
+        this.toastService.showError('Failed to update status: ' + (err.error?.message || err.message));
       }
     });
   }
 
   goBack() {
     this.selectedPatient = null;
-    this.activeTab = 'overview';
+    this.setTab(this.previousTab || 'patients');
   }
 
   backToPatients() {
-    this.activeTab = 'patients';
+    this.setTab(this.previousTab || 'patients');
     this.selectedPatient = null;
     this.citizenDetails = null;
     this.emergencyDetails = null;
@@ -265,13 +308,14 @@ export class DoctorDashboard implements OnInit {
     this.http.patch<any>(`http://localhost:9090/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
       .subscribe({
         next: () => {
+          this.toastService.showSuccess('Treatment status updated successfully');
           if (this.selectedPatient) {
             this.loadPatientTreatments(this.selectedPatient.patientId);
           }
           this.loadMyTreatments();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Failed to update treatment status';
+          this.toastService.showError(err.error?.message || 'Failed to update treatment status');
           this.cdr.detectChanges();
         }
       });
@@ -326,3 +370,4 @@ export class DoctorDashboard implements OnInit {
     return this.patientDoctorMap.get(patientId) || 'Loading...';
   }
 }
+
