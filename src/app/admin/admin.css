@@ -207,3 +207,26 @@
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+/* Consistent vertical action buttons in tables */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+/* Section divider heading inside detail cards */
+.section-divider {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Detail page action bar */
+.detail-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}

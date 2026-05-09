@@ -17,10 +17,8 @@ export class ComplianceService {
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   private get headers() {
-    const userId = this.auth.getUser()?.id;
     return new HttpHeaders({ 
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': userId?.toString() || ''
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
   }
 

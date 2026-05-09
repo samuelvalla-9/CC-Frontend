@@ -10,11 +10,10 @@ import { Emergency } from '../../models/emergency.model';
 import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 
 @Component({
   selector: 'app-dispatcher',
-  imports: [FormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './dispatcher.html',
   styleUrl: './dispatcher.css',
 })
@@ -37,7 +36,7 @@ export class DispatcherDashboard implements OnInit {
 
   constructor(
     private http: HttpClient, 
-    private auth: AuthService, 
+    public auth: AuthService, 
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
@@ -154,10 +153,8 @@ export class DispatcherDashboard implements OnInit {
     if (this.isSubmitting) return;
     this.isSubmitting = true;
     
-    const userId = this.auth.getUser()?.id;
     const headers = new HttpHeaders({
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': String(userId)
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
     
     this.http.post<any>(`http://localhost:9090/emergencies/${e.emergencyId}/dispatch`,

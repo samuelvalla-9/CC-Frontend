@@ -1,5 +1,4 @@
 ﻿<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -32,7 +31,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hospital Admin Panel</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Admin' }} 👋</h2>
         <p>Manage facilities, staff, ambulances and patients</p>
       </div>
       <div class="stats-grid">
@@ -161,14 +160,16 @@
                 <td>{{ f.capacity }}</td>
                 <td><span class="status-badge" [class]="f.status.toLowerCase()">{{ f.status }}</span></td>
                 <td>
-                  <button class="btn-sm btn-info" style="min-width: 100px;" (click)="editFacility(f)" style="margin-right:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg> Edit</button>
-                  @if (f.status === 'ACTIVE') {
-                    <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.INACTIVE)">Deactivate</button>
-                  } @else if (f.status === 'INACTIVE') {
-                    <button class="btn-sm btn-success" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
-                  } @else {
-                    <button class="btn-sm btn-success" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
-                  }
+                  <div class="action-buttons">
+                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="editFacility(f)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg> Edit</button>
+                    @if (f.status === 'ACTIVE') {
+                      <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.INACTIVE)">Deactivate</button>
+                    } @else if (f.status === 'INACTIVE') {
+                      <button class="btn-sm btn-success" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                    } @else {
+                      <button class="btn-sm btn-success" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                    }
+                  </div>
                 </td>
               </tr>
             }
@@ -181,7 +182,7 @@
     @if (activeTab === 'editFacility' && selectedFacility) {
       <div class="page-header">
         <h2>Edit Facility: {{ selectedFacility.name }}</h2>
-        <button class="btn-back" (click)="cancelEditFacility()">â† Back</button>
+        <button class="btn-back" (click)="cancelEditFacility()">← Back</button>
       </div>
       <div class="form-card">
         @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
@@ -243,13 +244,16 @@
               <input type="text" formControlName="model" placeholder="e.g. Mercedes Sprinter" />
             </div>
             <div class="form-group">
-              <label>Assigned Facility</label>
+              <label>Assigned Facility *</label>
               <select formControlName="facilityId" class="filter-select">
-                <option [ngValue]="null">-- No Facility --</option>
+                <option [ngValue]="null" disabled>-- Select Facility --</option>
                 @for (f of facilities; track f.facilityId) {
                   <option [ngValue]="f.facilityId">{{ f.name }}</option>
                 }
               </select>
+              @if (ambulanceForm.get('facilityId')?.invalid && ambulanceForm.get('facilityId')?.touched) {
+                <small class="error-text">Facility is required</small>
+              }
             </div>
           </div>
           <button type="submit" class="btn-primary" [disabled]="isRegisteringAmbulance || ambulanceForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M10 10h4'></path><path d='M12 8v4'></path><rect x='2' y='4' width='20' height='13' rx='2'></rect><path d='M15 8h4l3 3v5h-7V8z'></path><circle cx='6' cy='18' r='2'></circle><circle cx='18' cy='18' r='2'></circle></svg> {{ isRegisteringAmbulance ? 'Registering...' : 'Register Ambulance' }}</button>
@@ -318,8 +322,17 @@
               @if (userForm.get('role')?.invalid && userForm.get('role')?.touched) {
                 <small class="error-text">Role is required</small>
               }
+            </div>          @if (userForm.get('role')?.value === 'DOCTOR' || userForm.get('role')?.value === 'NURSE') {
+            <div class="form-group">
+              <label>Assign to Facility *</label>
+              <select formControlName="facilityId">
+                <option [ngValue]="null">-- Select Facility --</option>
+                @for (f of facilities; track f.facilityId) {
+                  <option [ngValue]="f.facilityId">{{ f.name }} ({{ f.type }})</option>
+                }
+              </select>
             </div>
-            <div class="form-row">
+          }            <div class="form-row">
               <div class="form-group">
                 <label>Full Name *</label>
                 <input type="text" formControlName="name" placeholder="Full name" />
@@ -379,7 +392,7 @@
                   <span class="status-badge" [class]="(u.status || 'ACTIVE').toLowerCase()">{{ u.status || 'ACTIVE' }}</span>
                 </td>
                 <td>
-                  <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:stretch;">
+                  <div class="action-buttons">
 <button class="btn-sm btn-info" style="min-width: 100px;" (click)="viewUserDetails(u)">View</button>
 @if (u.status === 'ACTIVE') {
 @if ((u.userId || u.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
@@ -401,17 +414,46 @@
     @if (activeTab === 'userDetail' && selectedUser) {
       <div class="page-header">
         <h2>User Details: {{ selectedUser.name }}</h2>
-        <button class="btn-back" (click)="setTab('users')">â† Back</button>
+        <button class="btn-back" (click)="setTab('users')">← Back</button>
       </div>
       <div class="detail-card">
         <h3>User Information</h3>
         <div class="detail-row"><span>User ID</span><strong>#{{ selectedUser.userId }}</strong></div>
-        <div class="detail-row"><span>Name</span><strong>{{ selectedUser.name }}</strong></div>
-        <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
-        <div class="detail-row"><span>Phone</span><strong>{{ selectedUser.phone || 'N/A' }}</strong></div>
         <div class="detail-row"><span>Role</span><span class="role-tag" [class]="'role-' + selectedUser.role.toLowerCase()">{{ selectedUser.role }}</span></div>
         <div class="detail-row"><span>Status</span><span class="status-badge" [class]="(selectedUser.status || 'ACTIVE').toLowerCase()">{{ selectedUser.status || 'ACTIVE' }}</span></div>
-        <div style="margin-top:1.5rem; display:flex; gap:0.75rem; align-items:center;">
+
+        @if (userExtraDetails) {
+          @if (selectedUser.role === 'CITIZEN') {
+            <h3 class="section-divider">Citizen Profile</h3>
+            <div class="detail-row"><span>Citizen ID</span><strong>#{{ userExtraDetails.citizenId }}</strong></div>
+            <div class="detail-row"><span>Name</span><strong>{{ userExtraDetails.name || selectedUser.name }}</strong></div>
+            <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
+            <div class="detail-row"><span>Contact</span><strong>{{ userExtraDetails.contactInfo || 'N/A' }}</strong></div>
+            <div class="detail-row"><span>Address</span><strong>{{ userExtraDetails.address || 'N/A' }}</strong></div>
+            <div class="detail-row"><span>Date of Birth</span><strong>{{ userExtraDetails.dateOfBirth || 'N/A' }}</strong></div>
+            <div class="detail-row"><span>Gender</span><strong>{{ userExtraDetails.gender || 'N/A' }}</strong></div>
+          }
+          @else if (selectedUser.role === 'DOCTOR' || selectedUser.role === 'NURSE' || selectedUser.role === 'DISPATCHER') {
+            <h3 class="section-divider">Staff Profile</h3>
+            <div class="detail-row"><span>Staff ID</span><strong>#{{ userExtraDetails.staffId }}</strong></div>
+            <div class="detail-row"><span>Name</span><strong>{{ userExtraDetails.name || selectedUser.name }}</strong></div>
+            <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
+            <div class="detail-row"><span>Contact</span><strong>{{ userExtraDetails.contactInfo || 'N/A' }}</strong></div>
+            <div class="detail-row"><span>Facility</span><strong>{{ userExtraDetails.facilityId ? getFacilityName(userExtraDetails.facilityId) : 'Not assigned' }}</strong></div>
+          }
+          @else {
+            <h3 class="section-divider">Profile Details</h3>
+            <div class="detail-row"><span>Name</span><strong>{{ userExtraDetails.name || selectedUser.name }}</strong></div>
+            <div class="detail-row"><span>Email</span><strong>{{ userExtraDetails.email || selectedUser.email }}</strong></div>
+            <div class="detail-row"><span>Phone</span><strong>{{ userExtraDetails.phone || selectedUser.phone || 'N/A' }}</strong></div>
+          }
+        } @else {
+          <div class="detail-row"><span>Name</span><strong>{{ selectedUser.name }}</strong></div>
+          <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
+          <div class="detail-row"><span>Phone</span><strong>{{ selectedUser.phone || 'N/A' }}</strong></div>
+          <p style="color: var(--gray-500); font-style: italic; margin-top:0.5rem">Loading additional details...</p>
+        }
+        <div class="detail-actions">
 @if (errorMsg) { <div class="alert error" style="margin-bottom:0">{{ errorMsg }}</div> }
 @if (selectedUser.status === 'ACTIVE') {
 @if ((selectedUser.userId || selectedUser.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
@@ -422,6 +464,45 @@
 }
 </div>
 </div>
+
+      @if (selectedUser.role === 'CITIZEN') {
+        <div class="table-card" style="margin-top:1.5rem">
+          <h3 class="section-divider" style="margin-top:0">Uploaded Documents</h3>
+          <table>
+            <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              @for (doc of userDocuments; track doc.documentId) {
+                <tr>
+                  <td>#{{ doc.documentId }}</td>
+                  <td>{{ doc.uploadedDate }}</td>
+                  <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
+                  <td>
+                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="previewUserDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+                  </td>
+                </tr>
+              }
+              @empty { <tr><td colspan="4" class="empty">No documents uploaded</td></tr> }
+            </tbody>
+          </table>
+
+          @if (isLoadingUserDoc) {
+            <div class="loading-spinner" style="padding:2rem"><div class="spinner"></div></div>
+          }
+          @if (userDocPreviewUrl) {
+            <div class="document-preview" style="margin-top:1rem; padding:1rem; border:1px solid var(--border-color); border-radius:0.75rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <h3 style="margin:0; font-size: 1rem;">Document Preview</h3>
+                <button class="btn-sm btn-secondary" (click)="userDocPreviewUrl = null">Close Preview</button>
+              </div>
+              @if (userDocIsImage) {
+                <img [src]="userDocPreviewUrl" style="max-width:100%; max-height:500px; border-radius:0.5rem;" />
+              } @else {
+                <iframe [src]="userDocPreviewUrl" style="width:100%; height:500px; border:none; border-radius:0.5rem;"></iframe>
+              }
+            </div>
+          }
+        </div>
+      }
 }
 
     @if (activeTab === 'pendingDocs') {
@@ -450,7 +531,7 @@
     @if (activeTab === 'verifyDocuments' && selectedCitizen) {
       <div class="page-header">
         <h2>Documents for {{ selectedCitizen.name }}</h2>
-        <button class="btn-back" (click)="setTab('pendingDocs')">â† Back</button>
+        <button class="btn-back" (click)="setTab('pendingDocs')">← Back</button>
       </div>
       <div class="detail-card">
         <h3>Citizen Information</h3>
@@ -470,10 +551,10 @@
                 <td>{{ doc.uploadedDate }}</td>
                 <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
                 <td>
-                  <button class="btn-sm btn-info" style="min-width: 100px;" (click)="previewDocument(doc)" style="margin-right:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+                  <button class="btn-sm btn-info" style="min-width: 100px; margin-right:0.5rem;" (click)="previewDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
                   @if (doc.verificationStatus === 'PENDING') {
-                    <button class="btn-sm btn-success" (click)="verifyDocument(doc.documentId, 'VERIFIED')" style="margin-right:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Verify</button>
-                    <button class="btn-sm btn-danger" (click)="verifyDocument(doc.documentId, 'REJECTED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg> Reject</button>
+                    <button class="btn-sm btn-success" style="min-width: 100px; margin-right:0.5rem;" (click)="verifyDocument(doc.documentId, 'VERIFIED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Verify</button>
+                    <button class="btn-sm btn-danger" style="min-width: 100px;" (click)="verifyDocument(doc.documentId, 'REJECTED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg> Reject</button>
                   } @else {
                     <span style="color:#666">{{ doc.verificationStatus }}</span>
                   }
@@ -521,7 +602,7 @@
           <h3 style="margin-top:0">Select Emergency to Admit</h3>
           <div class="table-card" style="margin-bottom:1.5rem">
             <table>
-              <thead><tr><th>Emergency ID</th><th>Type</th><th>Location</th><th>Reported By</th><th>Citizen ID</th><th>Ambulance</th><th>Dispatched At</th><th>Action</th></tr></thead>
+              <thead><tr><th>Emergency ID</th><th>Type</th><th>Location</th><th>Reported By</th><th>Citizen ID</th><th>Ambulance</th><th>Facility</th><th>Dispatched At</th><th>Action</th></tr></thead>
               <tbody>
                 @for (e of dispatchedEmergencies; track e.emergencyId) {
                   <tr>
@@ -531,6 +612,7 @@
                     <td><strong>{{ e.reportedBy || 'Loading...' }}</strong></td>
                     <td>#{{ e.citizenId }}</td>
                     <td>{{ e.ambulance?.vehicleNumber || 'N/A' }}</td>
+                    <td>{{ e.ambulance?.facilityId ? getFacilityName(e.ambulance.facilityId) : 'Unassigned' }}</td>
                     <td>{{ e.dispatchedAt | date:'short' }}</td>
                     <td>
                       <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:stretch;">
@@ -556,6 +638,10 @@
                   <label>Emergency ID</label>
                   <input type="number" [(ngModel)]="admitForm.emergencyId" name="emergencyId" readonly style="background:var(--gray-100)" />
                 </div>
+              </div>
+              <div class="form-group">
+                <label>Assigned Facility</label>
+                <input type="text" [value]="admitForm.facilityId ? getFacilityName(admitForm.facilityId) : 'No facility assigned'" readonly style="background:var(--gray-100);font-weight:600" />
               </div>
               <div class="form-group">
                 <label>Ward</label>
@@ -584,6 +670,7 @@
             <tr>
               <th>Patient ID</th>
               <th>Reported By</th>
+              <th>Facility ID</th>
               <th>Ward</th>
               <th>Admission Date</th>
               <th>Status</th>
@@ -596,6 +683,7 @@
               <tr>
                 <td>#{{ p.patientId }}</td>
                 <td>{{ p.name || 'Loading...' }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
                 <td>{{ p.ward || 'N/A' }}</td>
                 <td>{{ p.admissionDate | date }}</td>
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
@@ -614,7 +702,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No patients found</td></tr> }
+            @empty { <tr><td colspan="8" class="empty">No patients found</td></tr> }
           </tbody>
         </table>
       </div>

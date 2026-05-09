@@ -9,12 +9,11 @@ import { PatientService } from '../services/patient.service';
 import { EmergencyService } from '../services/emergency.service';
 import { NotificationService } from '../services/notification.service';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-compliance',
-  imports: [FormsModule, ReactiveFormsModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, ReactiveFormsModule, Navbar, DatePipe],
   templateUrl: './compliance.html',
   styleUrl: './compliance.css',
 })
@@ -44,7 +43,7 @@ export class ComplianceDashboard implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private auth: AuthService,
+    public auth: AuthService,
     private facilityService: FacilityService,
     private patientService: PatientService,
     private emergencyService: EmergencyService,

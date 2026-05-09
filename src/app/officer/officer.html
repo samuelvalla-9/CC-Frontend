@@ -1,5 +1,4 @@
 <app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -26,7 +25,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>City Health Officer Workbench</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Health Officer' }} 👋</h2>
         <p>Program monitoring, compliance tracking and analytics</p>
       </div>
       <div class="stats-grid">

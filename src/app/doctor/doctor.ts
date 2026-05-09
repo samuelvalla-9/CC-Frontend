@@ -10,11 +10,10 @@ import { Patient, Treatment, PatientStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 
 @Component({
   selector: 'app-doctor',
-  imports: [FormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './doctor.html',
   styleUrl: './doctor.css',
 })
@@ -37,6 +36,8 @@ export class DoctorDashboard implements OnInit {
   patientDoctorMap: Map<number, string> = new Map();
   statusHighlight = false;
   private previousTab: string = 'patients';
+  private staffFacilityId: number | null = null;
+  staffFacilityName: string = '';
 
   get admittedCount() { return this.patients.filter(p => p.status === 'ADMITTED').length; }
   get criticalCount() { return this.patients.filter(p => p.status === 'CRITICAL').length; }
@@ -53,7 +54,7 @@ export class DoctorDashboard implements OnInit {
     private patientService: PatientService,
     private treatmentService: TreatmentService,
     private notificationService: NotificationService,
-    private auth: AuthService,
+    public auth: AuthService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
@@ -90,38 +91,60 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadPatients() {
-    this.patientService.getAllPatients().subscribe({
-      next: d => {
-        const allPatients = d;
-        // Load assigned doctor for each patient
-        allPatients.forEach(p => this.loadAssignedDoctor(p.patientId));
-        
-        // Load my treatments to determine which patients are assigned to me
-        const doctorId = this.auth.getUser()?.id;
-        if (doctorId) {
-          this.treatmentService.getTreatmentsByDoctorId(doctorId).subscribe({
-            next: treatments => {
-              this.assignedPatientIds = new Set(treatments.map(t => t.patientId));
-              this.myPatients = allPatients.filter(p => this.assignedPatientIds.has(p.patientId));
-              this.patients = allPatients.filter(p => !this.assignedPatientIds.has(p.patientId));
-              this.applyMyPatientsFilter();
-              this.cdr.detectChanges();
-            },
-            error: () => {
-              this.patients = allPatients;
-              this.myPatients = [];
-              this.cdr.detectChanges();
-            }
-          });
-        } else {
-          this.patients = allPatients;
+    const doctorId = this.auth.getUser()?.id;
+    if (!doctorId) return;
+
+    const loadUnassigned = (facilityId?: number) => {
+      const unassigned$ = facilityId
+        ? this.patientService.getUnassignedPatientsByFacility(facilityId)
+        : this.patientService.getUnassignedPatients();
+
+      const myPatients$ = facilityId
+        ? this.patientService.getPatientsByFacilityAndDoctor(facilityId, doctorId)
+        : this.patientService.getPatientsByDoctor(doctorId);
+
+      unassigned$.subscribe({
+        next: d => {
+          this.patients = d;
+          d.forEach(p => this.loadAssignedDoctor(p.patientId));
           this.cdr.detectChanges();
-        }
-      },
-      error: (err) => {
-        this.toastService.showError('Failed to load patients');
-      }
-    });
+        },
+        error: () => this.toastService.showError('Failed to load patients')
+      });
+
+      myPatients$.subscribe({
+        next: d => {
+          this.myPatients = d;
+          this.assignedPatientIds = new Set(d.map(p => p.patientId));
+          this.applyMyPatientsFilter();
+          this.cdr.detectChanges();
+        },
+        error: () => { this.myPatients = []; }
+      });
+    };
+
+    if (this.staffFacilityId) {
+      loadUnassigned(this.staffFacilityId);
+    } else {
+      this.http.get<any>(`http://localhost:9090/staff/${doctorId}`, { headers: this.headers }).subscribe({
+        next: (res) => {
+          const staff = res?.data ?? res;
+          this.staffFacilityId = staff.facilityId;
+          if (staff.facilityId && !this.staffFacilityName) {
+            this.http.get<any>(`http://localhost:9090/facilities/${staff.facilityId}`, { headers: this.headers }).subscribe({
+              next: (fRes) => {
+                const facility = fRes?.data ?? fRes;
+                this.staffFacilityName = facility?.name || 'Facility #' + staff.facilityId;
+                this.cdr.detectChanges();
+              },
+              error: () => { this.staffFacilityName = 'Facility #' + staff.facilityId; }
+            });
+          }
+          loadUnassigned(this.staffFacilityId ?? undefined);
+        },
+        error: () => loadUnassigned()
+      });
+    }
   }
 
   loadMyTreatments() {
@@ -189,10 +212,13 @@ export class DoctorDashboard implements OnInit {
   loadPatientTreatments(patientId: number) {
     this.treatmentService.getTreatmentsByPatient(patientId).subscribe({
       next: d => {
-        this.patientTreatments = d;
+        this.patientTreatments = d ?? [];
         this.cdr.detectChanges();
       },
-      error: (err) => this.toastService.showError('Failed to load treatments')
+      error: () => {
+        this.patientTreatments = [];
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -336,7 +362,8 @@ export class DoctorDashboard implements OnInit {
           }
         },
         error: () => {
-          this.patientDoctorMap.set(patientId, 'Unknown');
+          this.patientDoctorMap.set(patientId, 'Not assigned');
+          this.cdr.detectChanges();
         }
       });
   }

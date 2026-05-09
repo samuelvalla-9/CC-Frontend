@@ -7,11 +7,10 @@ import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 
 @Component({
   selector: 'app-officer',
-  imports: [FormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './officer.html',
   styleUrl: './officer.css',
 })
@@ -53,7 +52,7 @@ export class OfficerDashboard implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private auth: AuthService,
+    public auth: AuthService,
     private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router

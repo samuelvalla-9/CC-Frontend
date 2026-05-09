@@ -4,7 +4,6 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { DatePipe, CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Navbar } from '../shared/navbar';
-import { ToastComponent } from '../shared/toast';
 import { AuthService } from '../services/auth.service';
 import { CitizenService, CitizenProfile, CitizenDocument } from '../services/citizen.service';
 import { NotificationService } from '../services/notification.service';
@@ -15,7 +14,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-citizen',
-  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './citizen.html',
   styleUrl: './citizen.css',
 })
@@ -49,7 +48,7 @@ export class CitizenDashboard implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private auth: AuthService,
+    public auth: AuthService,
     private citizenService: CitizenService,
     private notificationService: NotificationService,
     private toastService: ToastService,

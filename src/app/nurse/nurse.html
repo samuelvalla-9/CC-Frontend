@@ -1,5 +1,4 @@
 ﻿<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard">
   <aside class="sidebar">
@@ -20,7 +19,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Nurse Dashboard</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Nurse' }} 👋</h2>
         <p>Manage patient care and execute treatments</p>
       </div>
       <div class="stats-grid">
@@ -67,13 +66,14 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Citizen ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
+            <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
           </thead>
           <tbody>
             @for (p of patients; track p.patientId) {
               <tr>
                 <td>#{{ p.patientId }}</td>
                 <td>{{ p.citizenId }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
                 <td>{{ p.ward || 'N/A' }}</td>
                 <td>{{ p.admissionDate | date }}</td>
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
@@ -85,7 +85,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No patients found</td></tr> }
+            @empty { <tr><td colspan="8" class="empty">No patients found</td></tr> }
           </tbody>
         </table>
       </div>

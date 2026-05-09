@@ -1,5 +1,4 @@
 ﻿<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -26,8 +25,8 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Doctor Dashboard</h2>
-        <p>Manage patients and treatment records</p>
+        <h2>Hello, {{ auth.getUser()?.name || 'Doctor' }} 👋</h2>
+        <p>Manage patients and treatment records @if (staffFacilityName) { — <strong>{{ staffFacilityName }}</strong> }</p>
       </div>
       <div class="stats-grid">
         <div class="stat-card green card-interactive" (click)="setTab('patients')">
@@ -67,13 +66,14 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Citizen ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
+            <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
           </thead>
           <tbody>
             @for (p of patients; track p.patientId) {
               <tr>
                 <td>#{{ p.patientId }}</td>
                 <td>{{ p.citizenId }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
                 <td>{{ p.ward || 'N/A' }}</td>
                 <td>{{ p.admissionDate | date }}</td>
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
@@ -85,7 +85,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No patients found</td></tr> }
+            @empty { <tr><td colspan="8" class="empty">No patients found</td></tr> }
           </tbody>
         </table>
       </div>
@@ -105,10 +105,12 @@
               <div class="detail-item"><span>Patient ID:</span><strong>#{{ selectedPatient.patientId }}</strong></div>
               <div class="detail-item"><span>Citizen ID:</span><strong>{{ selectedPatient.citizenId }}</strong></div>
               <div class="detail-item"><span>Emergency ID:</span><strong>{{ selectedPatient.emergencyId }}</strong></div>
+              <div class="detail-item"><span>Facility ID:</span><strong>{{ selectedPatient.facilityId || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Assigned Doctor:</span><strong>{{ getAssignedDoctorName(selectedPatient.patientId) }}</strong></div>
               <div class="detail-item"><span>Ward:</span><strong>{{ selectedPatient.ward || 'N/A' }}</strong></div>
               <div class="detail-item"><span>Admission Date:</span><strong>{{ selectedPatient.admissionDate | date }}</strong></div>
               <div class="detail-item"><span>Status:</span><span class="status-badge" [class]="selectedPatient.status.toLowerCase()" [class.status-highlight]="statusHighlight">{{ selectedPatient.status }}</span></div>
-              @if (selectedPatient.status !== 'DISCHARGED') {
+              @if (selectedPatient.status !== 'DISCHARGED' && assignedPatientIds.has(selectedPatient.patientId)) {
                 <div class="detail-item">
                   <span>Update Status:</span>
                   <div style="display:flex;gap:0.5rem">
@@ -166,9 +168,18 @@
         </div>
 
         <div class="treatments-card">
+          @if (!assignedPatientIds.has(selectedPatient.patientId) && selectedPatient.status !== 'DISCHARGED' && showTreatmentForm !== selectedPatient.patientId) {
+            <div class="assignment-guidance" style="background: #eef6ff; border: 2px dashed #4a90d9; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
+              <p style="color: #1a5276; font-size: 1rem; margin-bottom: 0.75rem;"><strong>This patient is not yet assigned to any doctor.</strong> Adding a treatment will automatically assign this patient to you.</p>
+              <button class="btn-primary" style="font-size: 1.1rem; padding: 0.75rem 2rem;" (click)="openTreatmentForm(selectedPatient)">
+                <svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg>
+                Add Treatment &amp; Assign to Me
+              </button>
+            </div>
+          }
           <div class="section-header">
             <h3>Treatment History</h3>
-            @if (showTreatmentForm !== selectedPatient.patientId && selectedPatient.status !== 'DISCHARGED') {
+            @if (assignedPatientIds.has(selectedPatient.patientId) && showTreatmentForm !== selectedPatient.patientId && selectedPatient.status !== 'DISCHARGED') {
               <button class="btn-primary" (click)="openTreatmentForm(selectedPatient)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg> Add Treatment</button>
             }
           </div>
@@ -243,13 +254,14 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Citizen ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Action</th></tr>
+            <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody>
             @for (p of filteredMyPatients; track p.patientId) {
               <tr>
                 <td>#{{ p.patientId }}</td>
                 <td>{{ p.citizenId }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
                 <td>{{ p.ward || 'N/A' }}</td>
                 <td>{{ p.admissionDate | date }}</td>
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
@@ -258,7 +270,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="6" class="empty">No patients assigned to you yet</td></tr> }
+            @empty { <tr><td colspan="7" class="empty">No patients assigned to you yet</td></tr> }
           </tbody>
         </table>
       </div>

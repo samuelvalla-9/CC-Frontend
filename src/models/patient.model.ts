@@ -21,6 +21,7 @@ export interface Patient {
   name?: string;
   facilityId?: number;
   facilityName?: string;
+  assignedStaffId?: number;
   admissionDate: string;
   dischargeDate?: string;
   ward?: string;

@@ -1,5 +1,4 @@
 <app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -20,7 +19,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Dispatcher Console</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Dispatcher' }} 👋</h2>
         <p>Review pending emergencies and dispatch ambulances</p>
       </div>
       <div class="stats-grid">

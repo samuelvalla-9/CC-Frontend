@@ -5,7 +5,6 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Navbar } from '../shared/navbar';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 import { NotificationService } from '../services/notification.service';
 import { Patient, Treatment, PatientStatus, TreatmentStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
@@ -13,7 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-nurse',
-  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, DatePipe, ToastComponent],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './nurse.html',
   styleUrl: './nurse.css',
 })
@@ -44,7 +43,7 @@ export class NurseDashboard implements OnInit {
 
   constructor(
     private http: HttpClient, 
-    private auth: AuthService,
+    public auth: AuthService,
     private toastService: ToastService, 
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef,
@@ -91,16 +90,42 @@ export class NurseDashboard implements OnInit {
     if (tab === 'notifications') this.loadNotifications();
   }
 
+  private staffFacilityId: number | null = null;
+
   loadPatients() {
-    this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
-      .subscribe({ 
-        next: d => {
-          this.patients = d?.data ?? d;
-          this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
-          this.cdr.detectChanges();
-        }, 
-        error: () => {} 
+    const nurseId = this.auth.getUser()?.id;
+    if (!nurseId) return;
+
+    const loadFromSource = (url: string) => {
+      this.http.get<any>(url, { headers: this.headers })
+        .subscribe({ 
+          next: d => {
+            this.patients = d?.data ?? d;
+            this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
+            this.cdr.detectChanges();
+          }, 
+          error: () => {} 
+        });
+    };
+
+    if (this.staffFacilityId) {
+      loadFromSource(`http://localhost:9090/patients/facility/${this.staffFacilityId}`);
+    } else {
+      this.http.get<any>(`http://localhost:9090/staff/${nurseId}`, { headers: this.headers }).subscribe({
+        next: (res) => {
+          const staff = res?.data ?? res;
+          this.staffFacilityId = staff.facilityId;
+          if (this.staffFacilityId) {
+            loadFromSource(`http://localhost:9090/patients/facility/${this.staffFacilityId}`);
+          } else {
+            loadFromSource('http://localhost:9090/patients');
+          }
+        },
+        error: () => {
+          loadFromSource('http://localhost:9090/patients');
+        }
       });
+    }
   }
 
   loadMyTreatments() {

@@ -46,11 +46,7 @@ export class EmergencyService {
   }
 
   dispatchAmbulance(emergencyId: number, dispatcherId: number, request: any): Observable<Emergency> {
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': dispatcherId.toString()
-    });
-    return this.http.post<ApiResponse<Emergency>>(`${this.API}/${emergencyId}/dispatch`, request, { headers })
+    return this.http.post<ApiResponse<Emergency>>(`${this.API}/${emergencyId}/dispatch`, request, { headers: this.headers })
       .pipe(map(res => res.data));
   }
 

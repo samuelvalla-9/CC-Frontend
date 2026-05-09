@@ -1,5 +1,4 @@
 <app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -29,7 +28,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Compliance Officer Console</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Compliance Officer' }} 👋</h2>
         <p>Compliance records, audit initiation, audit logs and policy monitoring</p>
       </div>
       <div class="stats-grid">

@@ -17,12 +17,11 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
-import { ToastComponent } from '../shared/toast';
 import { ConfirmDialogService } from '../shared/confirm-dialog';
 
 @Component({
   selector: 'app-admin',
-  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, ToastComponent],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
@@ -34,6 +33,7 @@ export class AdminDashboard implements OnInit {
   users: User[] = [];
   patients: Patient[] = [];
   patientDoctorMap: Map<number, string> = new Map();
+  private citizenNameCache: Map<number, string> = new Map();
   dispatchedEmergencies: any[] = [];
   pendingDocuments: PendingCitizen[] = [];
   notifications: Notification[] = [];
@@ -46,6 +46,12 @@ export class AdminDashboard implements OnInit {
   documentIsImage = false;
   isLoadingDocument = false;
   selectedUser: User | null = null;
+  userExtraDetails: any = null;
+  userDocuments: any[] = [];
+  userDocPreviewUrl: SafeResourceUrl | null = null;
+  userDocIsImage = false;
+  isLoadingUserDoc = false;
+  private userCitizenId: number | null = null;
   selectedFacility: Facility | null = null;
   isEditingFacility = false;
   facilityStatusFilter: FacilityStatus | 'ALL' = 'ALL';
@@ -72,13 +78,11 @@ export class AdminDashboard implements OnInit {
   editFacilityForm!: FormGroup;
   userForm!: FormGroup;
   ambulanceForm!: FormGroup;
-  admitForm = { citizenId: 0, emergencyId: 0, ward: '', notes: '' };
+  admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
 
   private get headers() {
-    const userId = this.auth.getUser()?.id;
     return new HttpHeaders({
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': userId?.toString() || ''
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
   }
 
@@ -122,12 +126,13 @@ export class AdminDashboard implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).+$/)]],
       phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
-      role: ['', Validators.required]
+      role: ['', Validators.required],
+      facilityId: [null, Validators.required]
     });
     this.ambulanceForm = this.fb.group({
       vehicleNumber: ['', [Validators.required, Validators.pattern(/^[A-Z]{2,4}-\d{2,4}$/), Validators.minLength(4), Validators.maxLength(10)]],
       model: ['', Validators.maxLength(50)],
-      facilityId: [null]
+      facilityId: [null, Validators.required]
     });
   }
 
@@ -264,28 +269,38 @@ export class AdminDashboard implements OnInit {
       .subscribe({
         next: d => {
           this.patients = d?.data ?? d;
-          // Load citizen names and assigned doctors for each patient
+          // Collect unique citizenIds that aren't cached yet
+          const uncachedCitizenIds = [...new Set(this.patients.map(p => p.citizenId))]
+            .filter(id => !this.citizenNameCache.has(id));
+          // Apply cached names immediately (no jitter for already-known citizens)
           this.patients.forEach(p => {
-            this.loadCitizenName(p);
-            this.loadAssignedDoctor(p.patientId);
+            const cached = this.citizenNameCache.get(p.citizenId);
+            if (cached) p.name = cached;
+          });
+          // Fetch only uncached citizen names
+          uncachedCitizenIds.forEach(id => {
+            this.citizenService.getCitizenById(id).subscribe({
+              next: citizen => {
+                this.citizenNameCache.set(id, citizen.name);
+                this.patients.filter(p => p.citizenId === id).forEach(p => p.name = citizen.name);
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.citizenNameCache.set(id, 'Unknown Citizen');
+                this.patients.filter(p => p.citizenId === id).forEach(p => p.name = 'Unknown Citizen');
+                this.cdr.detectChanges();
+              }
+            });
+          });
+          // Load assigned doctors (only if not already cached)
+          this.patients.forEach(p => {
+            if (!this.patientDoctorMap.has(p.patientId)) {
+              this.loadAssignedDoctor(p.patientId);
+            }
           });
           this.cdr.detectChanges();
         },
         error: () => {}
-      });
-  }
-
-  loadCitizenName(patient: Patient) {
-    this.citizenService.getCitizenById(patient.citizenId)
-      .subscribe({
-        next: d => {
-          patient.name = d.name;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          patient.name = 'Unknown Citizen';
-          this.cdr.detectChanges();
-        }
       });
   }
 
@@ -465,7 +480,12 @@ export class AdminDashboard implements OnInit {
     switch (formValue.role) {
       case 'DOCTOR':
       case 'NURSE':
-        observable = this.adminService.createStaff(formValue);
+        if (!formValue.facilityId) {
+          this.toastService.showError('Please select a facility for Doctor/Nurse');
+          this.isSubmitting = false;
+          return;
+        }
+        observable = this.adminService.createStaffViaFacility(formValue);
         break;
       case 'DISPATCHER':
         observable = this.adminService.createDispatcher(formValue);
@@ -483,7 +503,7 @@ export class AdminDashboard implements OnInit {
 
     observable.subscribe({
       next: () => {
-        this.userForm.reset({ name: '', email: '', password: '', phone: '', role: '' });
+        this.userForm.reset({ name: '', email: '', password: '', phone: '', role: '', facilityId: null });
         this.showAddUser = false;
         this.isSubmitting = false;
         this.toastService.showSuccess('User created successfully');
@@ -563,6 +583,7 @@ export class AdminDashboard implements OnInit {
     const payload = {
       citizenId: this.admitForm.citizenId,
       emergencyId: this.admitForm.emergencyId,
+      facilityId: this.admitForm.facilityId,
       ward: this.admitForm.ward,
       notes: this.admitForm.notes
     };
@@ -571,7 +592,7 @@ export class AdminDashboard implements OnInit {
       .subscribe({
         next: () => {
           this.isAdmittingPatient = false;
-          this.admitForm = { citizenId: 0, emergencyId: 0, ward: '', notes: '' };
+          this.admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
           this.showAdmitPatient = false;
           this.toastService.showSuccess('Patient admitted successfully');
           this.loadPatients();
@@ -594,12 +615,13 @@ export class AdminDashboard implements OnInit {
   }
 
   cancelAdmit() {
-    this.admitForm = { citizenId: 0, emergencyId: 0, ward: '', notes: '' };
+    this.admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
   }
 
   prepareAdmit(emergency: any) {
     this.admitForm.citizenId = emergency.citizenId;
     this.admitForm.emergencyId = emergency.emergencyId;
+    this.admitForm.facilityId = emergency.ambulance?.facilityId || 0;
     this.admitForm.ward = '';
     this.admitForm.notes = `Emergency: ${emergency.type} at ${emergency.location}`;
   }
@@ -648,7 +670,105 @@ export class AdminDashboard implements OnInit {
 
   viewUserDetails(user: User) {
     this.selectedUser = user;
+    this.userExtraDetails = null;
+    this.userDocuments = [];
+    this.userDocPreviewUrl = null;
+    this.isLoadingUserDoc = false;
+    this.userCitizenId = null;
     this.setTab('userDetail');
+
+    const userId = user.userId || user.id;
+    this.loadRoleSpecificDetails(user.role, userId);
+  }
+
+  private loadRoleSpecificDetails(role: string, userId: number) {
+    switch (role) {
+      case 'CITIZEN':
+        // citizenId == userId in this system
+        this.http.get<any>(`http://localhost:9090/api/citizens/${userId}`, { headers: this.headers })
+          .subscribe({
+            next: res => {
+              const citizen = res?.data ?? res;
+              if (citizen && citizen.citizenId) {
+                this.userExtraDetails = citizen;
+                this.userCitizenId = citizen.citizenId;
+                this.cdr.detectChanges();
+                // Load documents
+                this.http.get<any>(`http://localhost:9090/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
+                  .subscribe({
+                    next: docRes => { this.userDocuments = docRes?.data ?? docRes; this.cdr.detectChanges(); },
+                    error: () => this.userDocuments = []
+                  });
+              } else {
+                this.fallbackToUserTable(userId);
+              }
+            },
+            error: () => this.fallbackToUserTable(userId)
+          });
+        break;
+
+      case 'DOCTOR':
+      case 'NURSE':
+      case 'DISPATCHER':
+        // staffId == userId in this system
+        this.http.get<any>(`http://localhost:9090/staff/${userId}`, { headers: this.headers })
+          .subscribe({
+            next: res => {
+              const staff = res?.data ?? res;
+              if (staff && (staff.staffId || staff.name)) {
+                this.userExtraDetails = staff;
+              } else {
+                this.fallbackToUserTable(userId);
+              }
+              this.cdr.detectChanges();
+            },
+            error: () => this.fallbackToUserTable(userId)
+          });
+        break;
+
+      case 'COMPLIANCE_OFFICER':
+      case 'CITY_HEALTH_OFFICER':
+      case 'ADMIN':
+      default:
+        this.fallbackToUserTable(userId);
+        break;
+    }
+  }
+
+  private fallbackToUserTable(userId: number) {
+    this.adminService.getUserById(userId).subscribe({
+      next: user => {
+        this.userExtraDetails = user;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.userExtraDetails = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  previewUserDocument(doc: any) {
+    if (!this.selectedUser || !this.userCitizenId) return;
+    this.isLoadingUserDoc = true;
+    this.userDocPreviewUrl = null;
+    this.userDocIsImage = false;
+    this.cdr.detectChanges();
+
+    this.citizenService.getDocumentBlob(this.userCitizenId, doc.documentId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        this.userDocIsImage = blob.type.startsWith('image/');
+        this.userDocPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.isLoadingUserDoc = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toastService.showError('Failed to load document');
+        this.isLoadingUserDoc = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   async verifyDocument(docId: number, status: 'VERIFIED' | 'REJECTED') {

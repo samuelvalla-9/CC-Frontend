@@ -6,13 +6,10 @@ import { tap } from 'rxjs';
 import { routes } from './app.routes';
 
 function jwtInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) {
-    const user = localStorage.getItem('user');
-    const userId = user ? JSON.parse(user).id || JSON.parse(user).userId : '';
     req = req.clone({ setHeaders: {
-      Authorization: `Bearer ${token}`,
-      'X-Auth-UserId': userId?.toString() || ''
+      Authorization: `Bearer ${token}`
     }});
   }
   return next(req);
@@ -23,9 +20,12 @@ function errorInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
     tap({
       error: (err) => {
         if (err.status === 401 && !req.url.includes('/auth/login')) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
           window.location.href = '/login';
+        }
+        if (err.status === 403) {
+          console.warn('Access denied (403):', req.url);
         }
       }
     })

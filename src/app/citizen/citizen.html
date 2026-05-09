@@ -1,5 +1,4 @@
 <app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
-<app-toast></app-toast>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
@@ -28,7 +27,7 @@
   <main class="content">
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Citizen Portal</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Citizen' }} 👋</h2>
         <p>Manage your healthcare services and emergencies</p>
       </div>
       <div class="stats-grid">
