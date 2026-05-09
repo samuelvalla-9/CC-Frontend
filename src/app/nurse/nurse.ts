@@ -1,16 +1,18 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Navbar } from '../shared/navbar';
 import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
 import { NotificationService } from '../services/notification.service';
 import { Patient, Treatment, PatientStatus, TreatmentStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-nurse',
-  imports: [FormsModule, CommonModule, Navbar, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar, DatePipe],
   templateUrl: './nurse.html',
   styleUrl: './nurse.css',
 })
@@ -26,12 +28,14 @@ export class NurseDashboard implements OnInit {
   patientTreatments: Treatment[] = [];
   showTreatmentForm: number | null = null;
   patientDoctorMap: Map<number, string> = new Map();
+  statusHighlight = false;
 
   get admittedCount() { return this.patients.filter(p => p.status === PatientStatus.ADMITTED).length; }
   get criticalCount() { return this.patients.filter(p => p.status === PatientStatus.CRITICAL).length; }
 
-  treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
+  treatmentForm!: FormGroup;
   errorMsg = '';
+  isSubmittingTreatment = false;
 
   private get headers() {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
@@ -39,27 +43,89 @@ export class NurseDashboard implements OnInit {
 
   constructor(
     private http: HttpClient, 
-    private auth: AuthService, 
+    public auth: AuthService,
+    private toastService: ToastService, 
     private notificationService: NotificationService,
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private router: Router,
+    private fb: FormBuilder
+  ) {
+    this.initTreatmentForm(0);
+  }
+
+  private initTreatmentForm(patientId: number) {
+    this.treatmentForm = this.fb.group({
+      patientId: [patientId],
+      description: ['', Validators.required],
+      medicationName: ['', Validators.required],
+      dosage: ['', Validators.required]
+    });
+  }
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+        this.handleTabChange(this.activeTab);
+      }
+    });
+
     this.loadPatients();
     this.loadMyTreatments();
     this.loadNotifications();
   }
 
+  setTab(tab: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private handleTabChange(tab: string) {
+    if (tab === 'patients') this.loadPatients();
+    if (tab === 'myTreatments') this.loadMyTreatments();
+    if (tab === 'notifications') this.loadNotifications();
+  }
+
+  private staffFacilityId: number | null = null;
+
   loadPatients() {
-    this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
-      .subscribe({ 
-        next: d => {
-          this.patients = d?.data ?? d;
-          this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
-          this.cdr.detectChanges();
-        }, 
-        error: () => {} 
+    const nurseId = this.auth.getUser()?.id;
+    if (!nurseId) return;
+
+    const loadFromSource = (url: string) => {
+      this.http.get<any>(url, { headers: this.headers })
+        .subscribe({ 
+          next: d => {
+            this.patients = d?.data ?? d;
+            this.patients.forEach(p => this.loadAssignedDoctor(p.patientId));
+            this.cdr.detectChanges();
+          }, 
+          error: () => {} 
+        });
+    };
+
+    if (this.staffFacilityId) {
+      loadFromSource(`http://localhost:9090/patients/facility/${this.staffFacilityId}`);
+    } else {
+      this.http.get<any>(`http://localhost:9090/staff/${nurseId}`, { headers: this.headers }).subscribe({
+        next: (res) => {
+          const staff = res?.data ?? res;
+          this.staffFacilityId = staff.facilityId;
+          if (this.staffFacilityId) {
+            loadFromSource(`http://localhost:9090/patients/facility/${this.staffFacilityId}`);
+          } else {
+            loadFromSource('http://localhost:9090/patients');
+          }
+        },
+        error: () => {
+          loadFromSource('http://localhost:9090/patients');
+        }
       });
+    }
   }
 
   loadMyTreatments() {
@@ -93,7 +159,7 @@ export class NurseDashboard implements OnInit {
     this.loadPatientTreatments(patient.patientId);
     this.loadCitizenDetails(patient.citizenId);
     this.loadEmergencyDetails(patient.emergencyId);
-    this.activeTab = 'patientDetail';
+    this.setTab('patientDetail');
   }
 
   loadPatientTreatments(patientId: number) {
@@ -131,46 +197,47 @@ export class NurseDashboard implements OnInit {
 
   openTreatmentForm(patient: Patient) {
     this.showTreatmentForm = patient.patientId;
-    this.treatmentForm = { 
-      patientId: patient.patientId, 
-      description: '', 
-      medicationName: '', 
-      dosage: '' 
-    };
-    this.errorMsg = '';
+    this.initTreatmentForm(patient.patientId);
   }
 
   backToPatients() {
-    this.activeTab = 'patients';
+    this.setTab('patients');
     this.selectedPatient = null;
     this.citizenDetails = null;
     this.emergencyDetails = null;
     this.showTreatmentForm = null;
     this.patientTreatments = [];
-    this.errorMsg = '';
   }
 
   cancelTreatmentForm() {
     this.showTreatmentForm = null;
-    this.treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
-    this.errorMsg = '';
+    this.initTreatmentForm(0);
   }
 
   addTreatment() {
-    this.errorMsg = '';
-    this.http.post<any>('http://localhost:9090/treatments', this.treatmentForm, { headers: this.headers })
+    if (this.isSubmittingTreatment) return;
+    if (this.treatmentForm.invalid) {
+      this.treatmentForm.markAllAsTouched();
+      this.toastService.showError('Please fill all required fields');
+      return;
+    }
+    this.isSubmittingTreatment = true;
+    this.http.post<any>('http://localhost:9090/treatments', this.treatmentForm.value, { headers: this.headers })
       .subscribe({
         next: () => { 
+          this.isSubmittingTreatment = false; 
           this.showTreatmentForm = null;
-          this.treatmentForm = { patientId: 0, description: '', medicationName: '', dosage: '' };
+          this.initTreatmentForm(0);
           this.loadMyTreatments();
           if (this.selectedPatient) {
             this.loadPatientTreatments(this.selectedPatient.patientId);
           }
+          this.toastService.showSuccess('Treatment added successfully');
           this.cdr.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Failed to add treatment';
+          this.isSubmittingTreatment = false;
+          this.toastService.showError(err.error?.message || 'Failed to add treatment');
         }
       });
   }
@@ -179,13 +246,14 @@ export class NurseDashboard implements OnInit {
     this.http.patch<any>(`http://localhost:9090/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
       .subscribe({
         next: () => {
+          this.toastService.showSuccess('Treatment status updated successfully');
           if (this.selectedPatient) {
             this.loadPatientTreatments(this.selectedPatient.patientId);
           }
           this.loadMyTreatments();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Failed to update treatment status';
+          this.toastService.showError(err.error?.message || 'Failed to update treatment status');
           this.cdr.detectChanges();
         }
       });
@@ -195,14 +263,17 @@ export class NurseDashboard implements OnInit {
     this.http.patch<any>(`http://localhost:9090/patients/${patientId}/status?status=${status}`, {}, { headers: this.headers })
       .subscribe({
         next: () => {
+          this.toastService.showSuccess('Patient status updated successfully');
           this.loadPatients();
           if (this.selectedPatient && this.selectedPatient.patientId === patientId) {
             this.selectedPatient = { ...this.selectedPatient, status: status as any };
           }
+          this.statusHighlight = true;
           this.cdr.detectChanges();
+          setTimeout(() => { this.statusHighlight = false; this.cdr.detectChanges(); }, 1600);
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Failed to update patient status';
+          this.toastService.showError(err.error?.message || 'Failed to update patient status');
           this.cdr.detectChanges();
         }
       });
@@ -271,3 +342,4 @@ export class NurseDashboard implements OnInit {
     return this.patientDoctorMap.get(patientId) || 'Loading...';
   }
 }
+

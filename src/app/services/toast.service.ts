@@ -28,11 +28,16 @@ export class ToastService {
     this.show(message, 'warning');
   }
 
+  showInfo(message: string) {
+    this.show(message, 'info');
+  }
+
   private show(message: string, type: Toast['type']) {
+    if (!message || message.trim() === '') return;
     const toast: Toast = { id: ++this.idCounter, message, type };
     const current = this.toasts$.value;
     this.toasts$.next([...current, toast]);
-    
+
     setTimeout(() => this.remove(toast.id), 5000);
   }
 

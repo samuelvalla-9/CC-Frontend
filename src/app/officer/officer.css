@@ -1,132 +1,63 @@
-/* ============================================
-   Health Officer Dashboard - Cyan/Teal Analytics Theme
+
+/* ============================================<
+   Enterprise Dashboard Theme - OFFICER
    ============================================ */
 
 @import '../citizen/citizen.css';
 
-/* Override primary colors with cyan/teal theme */
-.dashboard {
-  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
-}
-
 .sidebar button.active {
-  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-  color: #155e75;
-}
-
-.sidebar button.active::before {
-  background: #0891b2;
+  background-color: #cffafe;
+  color: #0891b2;
+  font-weight: 600;
 }
 
 .sidebar button:hover {
-  background: #ecfeff;
-  color: #155e75;
+  background-color: var(--gray-100);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+  background-color: #0891b2;
+  color: white;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0e7490 0%, #155e75 100%);
-}
-
-.stat-card.cyan .stat-icon {
-  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-}
-
-.stat-card.blue .stat-icon {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-}
-
-.stat-card::before {
-  background: linear-gradient(90deg, #0891b2, #0e7490);
-}
-
-input:focus, select:focus, textarea:focus {
-  border-color: #0891b2;
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+  background-color: #0e7490;
 }
 
 .page-header h2 {
-  color: #155e75;
+  color: #0891b2;
 }
 
 .notification-item.unread {
-  background: linear-gradient(135deg, #ecfeff 0%, white 100%);
   border-left: 4px solid #0891b2;
+  background-color: #cffafe;
 }
 
 .btn-read {
-  background: #0891b2;
+  background-color: #0891b2;
+  color: white;
 }
 
 .btn-read:hover {
-  background: #0e7490;
+  background-color: #0e7490;
 }
 
-/* Health Officer specific - KPI styling */
-.kpi-section {
-  background: white;
+.detail-card, .user-management-card, .treatments-card {
   border-top: 4px solid #0891b2;
 }
 
-.kpi-section h3 {
-  color: #155e75;
+.detail-card h3, .section-header h3 {
+  color: #0891b2;
 }
 
-.kpi-fill {
-  background: linear-gradient(90deg, #0891b2, #06b6d4);
-  box-shadow: 0 0 10px rgba(8, 145, 178, 0.3);
+.emergency-card {
+  border-left: 4px solid #ef4444;
 }
 
-.kpi-value {
-  color: #155e75;
+.emergency-card h3, .emergency-type {
+  color: #ef4444;
 }
+/* Dark Mode Role Overrides */
+:host-context([data-theme="dark"]) .sidebar button.active { color: var(--gray-900) !important; }
 
-/* Report cards */
-.report-card {
-  border-left: 4px solid #0891b2;
-  background: linear-gradient(135deg, white 0%, #ecfeff 100%);
-}
-
-.report-card:hover {
-  box-shadow: 0 20px 25px -5px rgba(8, 145, 178, 0.2);
-}
-
-/* Analytics badge */
-.analytics-badge {
-  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-  color: #155e75;
-  border: 1px solid #67e8f9;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-full);
-  font-weight: 700;
-  font-size: var(--text-xs);
-}
-
-/* Chart containers */
-.chart-container {
-  background: white;
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-lg);
-  border-top: 4px solid #0891b2;
-}
-
-/* Badge styling for sidebar */
-.sidebar button .badge {
-  margin-left: auto;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
-}
+:host-context([data-theme="dark"]) .notification-item.unread { background-color: var(--gray-200) !important; }

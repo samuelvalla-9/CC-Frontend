@@ -1,6 +1,6 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Navbar } from '../shared/navbar';
 import { AuthService } from '../services/auth.service';
@@ -16,10 +16,12 @@ import { Notification } from '../../models/notification.model';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastService } from '../services/toast.service';
+import { ConfirmDialogService } from '../shared/confirm-dialog';
 
 @Component({
   selector: 'app-admin',
-  imports: [FormsModule, CommonModule, Navbar],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, Navbar],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
@@ -31,6 +33,7 @@ export class AdminDashboard implements OnInit {
   users: User[] = [];
   patients: Patient[] = [];
   patientDoctorMap: Map<number, string> = new Map();
+  private citizenNameCache: Map<number, string> = new Map();
   dispatchedEmergencies: any[] = [];
   pendingDocuments: PendingCitizen[] = [];
   notifications: Notification[] = [];
@@ -40,8 +43,15 @@ export class AdminDashboard implements OnInit {
   citizenDocuments: any[] = [];
   selectedDocument$ = new BehaviorSubject<any>(null);
   documentPreviewUrl: SafeResourceUrl | null = null;
+  documentIsImage = false;
   isLoadingDocument = false;
   selectedUser: User | null = null;
+  userExtraDetails: any = null;
+  userDocuments: any[] = [];
+  userDocPreviewUrl: SafeResourceUrl | null = null;
+  userDocIsImage = false;
+  isLoadingUserDoc = false;
+  private userCitizenId: number | null = null;
   selectedFacility: Facility | null = null;
   isEditingFacility = false;
   facilityStatusFilter: FacilityStatus | 'ALL' = 'ALL';
@@ -51,27 +61,34 @@ export class AdminDashboard implements OnInit {
   patientTreatments: any[] = [];
   errorMsg = '';
 
+  // Toggle states for inline forms
+  showAddFacility = false;
+  showAddUser = false;
+  showAdmitPatient = false;
+  isSubmitting = false;
+  isSavingFacility = false;
+  isRegisteringAmbulance = false;
+  isAdmittingPatient = false;
+
   // Expose enums to template
   FacilityStatus = FacilityStatus;
   FacilityType = FacilityType;
 
-  facilityForm = { name: '', type: FacilityType.HOSPITAL, location: '', capacity: 0 };
-  editFacilityForm = { name: '', type: FacilityType.HOSPITAL, location: '', capacity: 0 };
-  userForm: CreateStaffRequest = { name: '', email: '', password: '', phone: '', role: '' };
-  staffForm: CreateStaffRequest = { name: '', email: '', password: '', phone: '', role: 'DOCTOR' };
-  dispatcherForm: CreateStaffRequest = { name: '', email: '', password: '', phone: '' };
-  complianceForm: CreateStaffRequest = { name: '', email: '', password: '', phone: '' };
-  healthOfficerForm: CreateStaffRequest = { name: '', email: '', password: '', phone: '' };
-  ambulanceForm = { vehicleNumber: '', model: '' };
-  admitForm = { citizenId: 0, emergencyId: 0, ward: '', notes: '' };
+  facilityForm!: FormGroup;
+  editFacilityForm!: FormGroup;
+  userForm!: FormGroup;
+  ambulanceForm!: FormGroup;
+  admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
 
   private get headers() {
-    return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
+    return new HttpHeaders({
+      Authorization: `Bearer ${this.auth.getToken()}`
+    });
   }
 
   constructor(
     private http: HttpClient,
-    private auth: AuthService,
+    public auth: AuthService,
     private adminService: AdminService,
     private citizenService: CitizenService,
     private notificationService: NotificationService,
@@ -81,9 +98,42 @@ export class AdminDashboard implements OnInit {
     private cdr: ChangeDetectorRef,
     private sanitizer: DomSanitizer,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService,
+    private confirmDialog: ConfirmDialogService,
+    private fb: FormBuilder
   ) {
     this.pendingCount$ = this.verificationService.pendingCount$;
+    this.initForms();
+  }
+
+  private initForms() {
+    this.facilityForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      type: [FacilityType.HOSPITAL, Validators.required],
+      location: ['', Validators.required],
+      capacity: [0, [Validators.required, Validators.min(0)]],
+      status: [FacilityStatus.ACTIVE]
+    });
+    this.editFacilityForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      type: [FacilityType.HOSPITAL, Validators.required],
+      location: ['', Validators.required],
+      capacity: [0, [Validators.required, Validators.min(0)]]
+    });
+    this.userForm = this.fb.group({
+      name: ['', [Validators.required, Validators.pattern(/^[A-Za-z\s]+$/)]],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).+$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+      role: ['', Validators.required],
+      facilityId: [null, Validators.required]
+    });
+    this.ambulanceForm = this.fb.group({
+      vehicleNumber: ['', [Validators.required, Validators.pattern(/^[A-Z]{2,4}-\d{2,4}$/), Validators.minLength(4), Validators.maxLength(10)]],
+      model: ['', Validators.maxLength(50)],
+      facilityId: [null, Validators.required]
+    });
   }
 
   ngOnInit() {
@@ -101,7 +151,7 @@ export class AdminDashboard implements OnInit {
     this.loadPendingVerifications();
     this.loadDispatchedEmergencies();
     this.loadNotifications();
-    
+
     this.verificationService.pendingCitizens$.subscribe(citizens => {
       this.pendingDocuments = citizens;
       this.cdr.markForCheck();
@@ -148,34 +198,43 @@ export class AdminDashboard implements OnInit {
 
   editFacility(facility: Facility) {
     this.selectedFacility = facility;
-    this.editFacilityForm = {
+    this.editFacilityForm.patchValue({
       name: facility.name,
       type: facility.type,
       location: facility.location,
       capacity: facility.capacity
-    };
+    });
     this.isEditingFacility = true;
-    this.activeTab = 'editFacility';
+    this.setTab('editFacility');
   }
 
   cancelEditFacility() {
     this.selectedFacility = null;
     this.isEditingFacility = false;
-    this.activeTab = 'facilities';
+    this.setTab('facilities');
   }
 
   submitEditFacility() {
     if (!this.selectedFacility) return;
-    
-    this.facilityService.updateFacility(this.selectedFacility.facilityId, this.editFacilityForm).subscribe({
+    if (this.isSavingFacility) return;
+    if (this.editFacilityForm.invalid) {
+      this.editFacilityForm.markAllAsTouched();
+      this.toastService.showError('Please fill all required fields correctly');
+      return;
+    }
+
+    this.isSavingFacility = true;
+    this.facilityService.updateFacility(this.selectedFacility.facilityId, this.editFacilityForm.value).subscribe({
       next: () => {
+        this.isSavingFacility = false;
+        this.toastService.showSuccess('Facility updated successfully');
         this.loadFacilities();
         this.cancelEditFacility();
-        this.errorMsg = '';
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        this.errorMsg = 'Failed to update facility: ' + (err.error?.message || err.message);
+      error: (err: any) => {
+        this.isSavingFacility = false;
+        this.toastService.showError('Failed to update facility');
       }
     });
   }
@@ -183,12 +242,12 @@ export class AdminDashboard implements OnInit {
   updateFacilityStatus(facilityId: number, newStatus: FacilityStatus) {
     this.facilityService.updateFacilityStatus(facilityId, newStatus).subscribe({
       next: () => {
+        this.toastService.showSuccess('Facility status updated successfully');
         this.loadFacilities();
-        this.errorMsg = '';
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        this.errorMsg = 'Failed to update facility status: ' + (err.error?.message || err.message);
+      error: (err: any) => {
+        this.toastService.showError('Failed to update facility status');
       }
     });
   }
@@ -200,40 +259,48 @@ export class AdminDashboard implements OnInit {
         this.users = d;
       },
       error: e => {
-        console.error('Error loading users:', e);
-        this.errorMsg = 'Failed to load users: ' + (e.error?.message || e.message);
+        this.toastService.showError('Failed to load users: ' + (e.error?.message || e.message));
       }
     });
   }
 
   loadPatients() {
     this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
-      .subscribe({ 
-        next: d => {
-          this.patients = d?.data ?? d;
-          // Load citizen names and assigned doctors for each patient
-          this.patients.forEach(p => {
-            this.loadCitizenName(p);
-            this.loadAssignedDoctor(p.patientId);
-          });
-          this.cdr.detectChanges();
-        }, 
-        error: () => {} 
-      });
-  }
-
-  loadCitizenName(patient: Patient) {
-    this.http.get<any>(`http://localhost:9090/api/citizens/${patient.citizenId}`, { headers: this.headers })
       .subscribe({
         next: d => {
-          const citizen = d?.data ?? d;
-          patient.name = citizen.name;
+          this.patients = d?.data ?? d;
+          // Collect unique citizenIds that aren't cached yet
+          const uncachedCitizenIds = [...new Set(this.patients.map(p => p.citizenId))]
+            .filter(id => !this.citizenNameCache.has(id));
+          // Apply cached names immediately (no jitter for already-known citizens)
+          this.patients.forEach(p => {
+            const cached = this.citizenNameCache.get(p.citizenId);
+            if (cached) p.name = cached;
+          });
+          // Fetch only uncached citizen names
+          uncachedCitizenIds.forEach(id => {
+            this.citizenService.getCitizenById(id).subscribe({
+              next: citizen => {
+                this.citizenNameCache.set(id, citizen.name);
+                this.patients.filter(p => p.citizenId === id).forEach(p => p.name = citizen.name);
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.citizenNameCache.set(id, 'Unknown Citizen');
+                this.patients.filter(p => p.citizenId === id).forEach(p => p.name = 'Unknown Citizen');
+                this.cdr.detectChanges();
+              }
+            });
+          });
+          // Load assigned doctors (only if not already cached)
+          this.patients.forEach(p => {
+            if (!this.patientDoctorMap.has(p.patientId)) {
+              this.loadAssignedDoctor(p.patientId);
+            }
+          });
           this.cdr.detectChanges();
         },
-        error: () => {
-          patient.name = 'Unknown Citizen';
-          this.cdr.detectChanges();
-        }
+        error: () => {}
       });
   }
 
@@ -286,11 +353,10 @@ export class AdminDashboard implements OnInit {
   }
 
   loadCitizenNameForEmergency(emergency: any) {
-    this.http.get<any>(`http://localhost:9090/api/citizens/${emergency.citizenId}`, { headers: this.headers })
+    this.citizenService.getCitizenById(emergency.citizenId)
       .subscribe({
         next: d => {
-          const citizen = d?.data ?? d;
-          emergency.reportedBy = citizen.name;
+          emergency.reportedBy = d.name;
           this.cdr.detectChanges();
         },
         error: () => {
@@ -300,15 +366,29 @@ export class AdminDashboard implements OnInit {
       });
   }
 
-  dischargePatient(patientId: number) {
+  async dischargePatient(patientId: number) {
+    const patient = this.patients.find((p: any) => p.patientId === patientId);
+    if (patient && patient.status !== 'STABLE') {
+      this.toastService.showError(`Cannot discharge: Patient is currently "${patient.status}". Patient must be in STABLE condition before discharge.`);
+      return;
+    }
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Discharge Patient',
+      message: 'Are you sure you want to discharge this patient? This action cannot be undone.',
+      confirmText: 'Discharge',
+      type: 'warning'
+    });
+    if (!confirmed) return;
+
     this.http.patch<any>(`http://localhost:9090/patients/${patientId}/status?status=DISCHARGED`, {}, { headers: this.headers })
       .subscribe({
         next: () => {
+          this.toastService.showSuccess('Patient discharged successfully');
           this.loadPatients();
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          this.errorMsg = 'Failed to discharge patient: ' + (err.error?.message || err.message);
+        error: (err: any) => {
+          this.toastService.showError('Failed to discharge patient: ' + (err.error?.message || err.message));
           this.cdr.detectChanges();
         }
       });
@@ -326,7 +406,7 @@ export class AdminDashboard implements OnInit {
 
   loadDispatchedEmergencies() {
     this.http.get<any>('http://localhost:9090/emergencies/dispatched', { headers: this.headers })
-      .subscribe({ 
+      .subscribe({
         next: d => {
           const allDispatched = d?.data ?? d;
           // Filter out emergencies that are already admitted by checking if patient exists
@@ -335,7 +415,7 @@ export class AdminDashboard implements OnInit {
               next: patientsRes => {
                 const patients = patientsRes?.data ?? patientsRes;
                 const admittedEmergencyIds = patients.map((p: any) => p.emergencyId);
-                this.dispatchedEmergencies = allDispatched.filter((e: any) => 
+                this.dispatchedEmergencies = allDispatched.filter((e: any) =>
                   !admittedEmergencyIds.includes(e.emergencyId)
                 );
                 // Load citizen names for each emergency
@@ -348,110 +428,210 @@ export class AdminDashboard implements OnInit {
                 this.cdr.markForCheck();
               }
             });
-        }, 
-        error: () => {} 
+        },
+        error: () => {}
       });
   }
 
   addFacility() {
-    this.errorMsg = '';
-    this.facilityService.createFacility(this.facilityForm).subscribe({
+    if (this.isSavingFacility) return;
+    if (this.facilityForm.invalid) {
+      this.facilityForm.markAllAsTouched();
+      this.toastService.showError('Please fill all required fields correctly');
+      return;
+    }
+    this.isSavingFacility = true;
+    this.facilityService.createFacility(this.facilityForm.value).subscribe({
       next: () => {
-        this.facilityForm = { name: '', type: FacilityType.HOSPITAL, location: '', capacity: 0 };
+        this.isSavingFacility = false;
+        this.facilityForm.reset({ name: '', type: FacilityType.HOSPITAL, location: '', capacity: 0, status: FacilityStatus.ACTIVE });
+        this.showAddFacility = false;
+        this.toastService.showSuccess('Facility added successfully');
         this.loadFacilities();
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        this.errorMsg = 'Failed to add facility: ' + (err.error?.message || err.message);
+      error: (err: any) => {
+        this.isSavingFacility = false;
+        this.toastService.showError('Failed to add facility');
       }
     });
   }
 
+  toggleAddFacility() {
+    this.showAddFacility = !this.showAddFacility;
+  }
+
   addUser() {
-    this.errorMsg = '';
-    if (!this.userForm.role) {
-      this.errorMsg = 'Please select a role';
+    if (this.userForm.invalid) {
+      this.userForm.markAllAsTouched();
+      this.toastService.showError('Please fill all required fields correctly');
+      return;
+    }
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
+    const formValue = this.userForm.value;
+    if (!formValue.role) {
+      this.toastService.showError('Please select a role');
       return;
     }
 
     let observable;
-    switch (this.userForm.role) {
+    switch (formValue.role) {
       case 'DOCTOR':
       case 'NURSE':
-        observable = this.adminService.createStaff(this.userForm);
+        if (!formValue.facilityId) {
+          this.toastService.showError('Please select a facility for Doctor/Nurse');
+          this.isSubmitting = false;
+          return;
+        }
+        observable = this.adminService.createStaffViaFacility(formValue);
         break;
       case 'DISPATCHER':
-        observable = this.adminService.createDispatcher(this.userForm);
+        observable = this.adminService.createDispatcher(formValue);
         break;
       case 'COMPLIANCE_OFFICER':
-        observable = this.adminService.createComplianceOfficer(this.userForm);
+        observable = this.adminService.createComplianceOfficer(formValue);
         break;
       case 'CITY_HEALTH_OFFICER':
-        observable = this.adminService.createHealthOfficer(this.userForm);
+        observable = this.adminService.createHealthOfficer(formValue);
         break;
       default:
-        this.errorMsg = 'Invalid role selected';
+        this.toastService.showError('Invalid role selected');
         return;
     }
 
     observable.subscribe({
       next: () => {
-        this.userForm = { name: '', email: '', password: '', phone: '', role: '' };
+        this.userForm.reset({ name: '', email: '', password: '', phone: '', role: '', facilityId: null });
+        this.showAddUser = false;
+        this.isSubmitting = false;
+        this.toastService.showSuccess('User created successfully');
         this.loadUsers();
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        this.errorMsg = 'Failed to add user: ' + (err.error?.message || err.message);
+      error: (err: any) => {
+        this.isSubmitting = false;
+        this.toastService.showError('Failed to add user');
       }
     });
   }
 
+  toggleAddUser() {
+    this.showAddUser = !this.showAddUser;
+  }
+
   registerAmbulance() {
-    this.errorMsg = '';
-    this.http.post<any>('http://localhost:9090/emergencies/admin/ambulances', this.ambulanceForm, { headers: this.headers })
+    if (this.isRegisteringAmbulance) return;
+    if (this.ambulanceForm.invalid) {
+      this.ambulanceForm.markAllAsTouched();
+      this.toastService.showError('Vehicle number is required');
+      return;
+    }
+    this.isRegisteringAmbulance = true;
+    this.http.post<any>('http://localhost:9090/emergencies/admin/ambulances', this.ambulanceForm.value, { headers: this.headers })
       .subscribe({
-        next: () => { this.ambulanceForm = { vehicleNumber: '', model: '' }; this.loadAmbulances(); },
-        error: () => this.errorMsg = 'Failed to register ambulance'
+        next: () => { this.isRegisteringAmbulance = false; this.ambulanceForm.reset({ vehicleNumber: '', model: '', facilityId: null }); this.toastService.showSuccess('Ambulance registered successfully'); this.loadAmbulances(); },
+        error: (err) => { this.isRegisteringAmbulance = false; this.toastService.showError(err.error?.message || 'Failed to register ambulance') }
       });
   }
 
+  updateAmbulanceStatus(id: number, status: string) {
+    this.ambulanceService.updateAmbulanceStatus(id, status).subscribe({
+      next: () => {
+        this.toastService.showSuccess('Ambulance status updated');
+        this.loadAmbulances();
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.toastService.showError('Failed to update ambulance status');
+      }
+    });
+  }
+
+  async removeAmbulance(ambulance: any) {
+    if (ambulance.status === 'DISPATCHED') {
+      this.toastService.showError('Cannot remove an ambulance that is currently dispatched');
+      return;
+    }
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Remove Ambulance',
+      message: `Are you sure you want to remove ambulance ${ambulance.vehicleNumber}? This action cannot be undone.`,
+      confirmText: 'Remove',
+      type: 'warning'
+    });
+    if (!confirmed) return;
+
+    this.ambulanceService.deleteAmbulance(ambulance.ambulanceId).subscribe({
+      next: () => {
+        this.toastService.showSuccess('Ambulance removed successfully');
+        this.loadAmbulances();
+      },
+      error: (err: any) => {
+        this.toastService.showError(err.error?.message || 'Failed to remove ambulance');
+      }
+    });
+  }
+
+  getFacilityName(facilityId: number): string {
+    const facility = this.facilities.find(f => f.facilityId === facilityId);
+    return facility ? facility.name : `Facility #${facilityId}`;
+  }
+
   admitPatient() {
-    this.errorMsg = '';
+    if (this.isAdmittingPatient) return;
     const payload = {
       citizenId: this.admitForm.citizenId,
       emergencyId: this.admitForm.emergencyId,
+      facilityId: this.admitForm.facilityId,
       ward: this.admitForm.ward,
       notes: this.admitForm.notes
     };
+    this.isAdmittingPatient = true;
     this.http.post<any>('http://localhost:9090/patients/admit', payload, { headers: this.headers })
       .subscribe({
-        next: () => { 
-          this.admitForm = { citizenId: 0, emergencyId: 0, ward: '', notes: '' }; 
-          this.activeTab = 'overview';
+        next: () => {
+          this.isAdmittingPatient = false;
+          this.admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
+          this.showAdmitPatient = false;
+          this.toastService.showSuccess('Patient admitted successfully');
           this.loadPatients();
           this.loadDispatchedEmergencies();
         },
-        error: (err) => {
+        error: (err: any) => {
+          this.isAdmittingPatient = false;
           const errorMessage = err.error?.message || err.message;
-          this.errorMsg = errorMessage;
+          this.toastService.showError(errorMessage);
           this.cdr.markForCheck();
         }
       });
   }
 
+  toggleAdmitPatient() {
+    this.showAdmitPatient = !this.showAdmitPatient;
+    if (this.showAdmitPatient) {
+      this.loadDispatchedEmergencies();
+    }
+  }
+
+  cancelAdmit() {
+    this.admitForm = { citizenId: 0, emergencyId: 0, facilityId: 0, ward: '', notes: '' };
+  }
+
   prepareAdmit(emergency: any) {
     this.admitForm.citizenId = emergency.citizenId;
     this.admitForm.emergencyId = emergency.emergencyId;
+    this.admitForm.facilityId = emergency.ambulance?.facilityId || 0;
     this.admitForm.ward = '';
     this.admitForm.notes = `Emergency: ${emergency.type} at ${emergency.location}`;
-    this.activeTab = 'admitPatient';
   }
 
   activateUser(userId: number) {
     const id = userId || (this.selectedUser?.userId ?? this.selectedUser?.id);
     this.adminService.activateUser(id!).subscribe({
       next: () => {
-        this.users = this.users.map(u => 
+        this.toastService.showSuccess('User activated successfully');
+        this.users = this.users.map(u =>
           (u.userId || u.id) === id ? { ...u, status: 'ACTIVE' as const } : u
         );
         if (this.selectedUser && (this.selectedUser.userId === id || this.selectedUser.id === id)) {
@@ -459,15 +639,24 @@ export class AdminDashboard implements OnInit {
         }
         this.cdr.markForCheck();
       },
-      error: () => this.errorMsg = 'Failed to activate user'
+      error: () => this.toastService.showError('Failed to activate user')
     });
   }
 
-  deactivateUser(userId: number) {
+  async deactivateUser(userId: number) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Deactivate User',
+      message: 'Are you sure you want to deactivate this user? They will no longer be able to access the system.',
+      confirmText: 'Deactivate',
+      type: 'warning'
+    });
+    if (!confirmed) return;
+
     const id = userId || (this.selectedUser?.userId ?? this.selectedUser?.id);
     this.adminService.deactivateUser(id!).subscribe({
       next: () => {
-        this.users = this.users.map(u => 
+        this.toastService.showSuccess('User deactivated successfully');
+        this.users = this.users.map(u =>
           (u.userId || u.id) === id ? { ...u, status: 'INACTIVE' as const } : u
         );
         if (this.selectedUser && (this.selectedUser.userId === id || this.selectedUser.id === id)) {
@@ -475,24 +664,133 @@ export class AdminDashboard implements OnInit {
         }
         this.cdr.markForCheck();
       },
-      error: () => this.errorMsg = 'Failed to deactivate user'
+      error: () => this.toastService.showError('Failed to deactivate user')
     });
   }
 
   viewUserDetails(user: User) {
     this.selectedUser = user;
-    this.activeTab = 'userDetail';
+    this.userExtraDetails = null;
+    this.userDocuments = [];
+    this.userDocPreviewUrl = null;
+    this.isLoadingUserDoc = false;
+    this.userCitizenId = null;
+    this.setTab('userDetail');
+
+    const userId = user.userId || user.id;
+    this.loadRoleSpecificDetails(user.role, userId);
   }
 
-  verifyDocument(docId: number, status: 'VERIFIED' | 'REJECTED') {
+  private loadRoleSpecificDetails(role: string, userId: number) {
+    switch (role) {
+      case 'CITIZEN':
+        // citizenId == userId in this system
+        this.http.get<any>(`http://localhost:9090/api/citizens/${userId}`, { headers: this.headers })
+          .subscribe({
+            next: res => {
+              const citizen = res?.data ?? res;
+              if (citizen && citizen.citizenId) {
+                this.userExtraDetails = citizen;
+                this.userCitizenId = citizen.citizenId;
+                this.cdr.detectChanges();
+                // Load documents
+                this.http.get<any>(`http://localhost:9090/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
+                  .subscribe({
+                    next: docRes => { this.userDocuments = docRes?.data ?? docRes; this.cdr.detectChanges(); },
+                    error: () => this.userDocuments = []
+                  });
+              } else {
+                this.fallbackToUserTable(userId);
+              }
+            },
+            error: () => this.fallbackToUserTable(userId)
+          });
+        break;
+
+      case 'DOCTOR':
+      case 'NURSE':
+      case 'DISPATCHER':
+        // staffId == userId in this system
+        this.http.get<any>(`http://localhost:9090/staff/${userId}`, { headers: this.headers })
+          .subscribe({
+            next: res => {
+              const staff = res?.data ?? res;
+              if (staff && (staff.staffId || staff.name)) {
+                this.userExtraDetails = staff;
+              } else {
+                this.fallbackToUserTable(userId);
+              }
+              this.cdr.detectChanges();
+            },
+            error: () => this.fallbackToUserTable(userId)
+          });
+        break;
+
+      case 'COMPLIANCE_OFFICER':
+      case 'CITY_HEALTH_OFFICER':
+      case 'ADMIN':
+      default:
+        this.fallbackToUserTable(userId);
+        break;
+    }
+  }
+
+  private fallbackToUserTable(userId: number) {
+    this.adminService.getUserById(userId).subscribe({
+      next: user => {
+        this.userExtraDetails = user;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.userExtraDetails = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  previewUserDocument(doc: any) {
+    if (!this.selectedUser || !this.userCitizenId) return;
+    this.isLoadingUserDoc = true;
+    this.userDocPreviewUrl = null;
+    this.userDocIsImage = false;
+    this.cdr.detectChanges();
+
+    this.citizenService.getDocumentBlob(this.userCitizenId, doc.documentId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        this.userDocIsImage = blob.type.startsWith('image/');
+        this.userDocPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.isLoadingUserDoc = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toastService.showError('Failed to load document');
+        this.isLoadingUserDoc = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  async verifyDocument(docId: number, status: 'VERIFIED' | 'REJECTED') {
+    if (status === 'REJECTED') {
+      const confirmed = await this.confirmDialog.confirm({
+        title: 'Reject Document',
+        message: 'Are you sure you want to reject this document? The citizen will need to re-upload.',
+        confirmText: 'Reject',
+        type: 'danger'
+      });
+      if (!confirmed) return;
+    }
+
     this.citizenService.verifyDocument(docId, status).subscribe({
       next: () => {
-        this.citizenDocuments = this.citizenDocuments.map(d => 
+        this.toastService.showSuccess(`Document ${status.toLowerCase()} successfully`);
+        this.citizenDocuments = this.citizenDocuments.map(d =>
           d.documentId === docId ? { ...d, verificationStatus: status } : d
         );
         this.verificationService.refreshVerifications();
       },
-      error: () => this.errorMsg = 'Failed to verify document'
+      error: () => this.toastService.showError('Failed to verify document')
     });
   }
 
@@ -513,9 +811,9 @@ export class AdminDashboard implements OnInit {
     this.selectedCitizen = citizen;
     this.citizenDocuments = [];
     this.documentPreviewUrl = null;
-    this.activeTab = 'verifyDocuments';
+    this.setTab('verifyDocuments');
     this.cdr.markForCheck();
-    
+
     this.http.get<any>(`http://localhost:9090/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
       .subscribe({
         next: res => {
@@ -523,7 +821,7 @@ export class AdminDashboard implements OnInit {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.errorMsg = 'Failed to load documents';
+          this.toastService.showError('Failed to load documents');
           this.cdr.markForCheck();
         }
       });
@@ -531,29 +829,27 @@ export class AdminDashboard implements OnInit {
 
   previewDocument(doc: any) {
     if (!this.selectedCitizen) {
-      console.error('No citizen selected');
+      this.toastService.showError('No citizen selected');
       return;
     }
-    
-    console.log('Previewing document:', doc.documentId, 'for citizen:', this.selectedCitizen.citizenId);
+
     this.isLoadingDocument = true;
     this.documentPreviewUrl = null;
+    this.documentIsImage = false;
     this.selectedDocument$.next(doc);
     this.cdr.markForCheck();
-    
+
     this.citizenService.getDocumentBlob(this.selectedCitizen.citizenId, doc.documentId)
       .subscribe({
         next: blob => {
-          console.log('Blob received:', blob.size, 'bytes, type:', blob.type);
           const url = URL.createObjectURL(blob);
-          console.log('Object URL created:', url);
+          this.documentIsImage = blob.type.startsWith('image/');
           this.documentPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
           this.isLoadingDocument = false;
           this.cdr.markForCheck();
         },
-        error: (err) => {
-          console.error('Failed to load document:', err);
-          this.errorMsg = 'Failed to load document preview: ' + (err.error?.message || err.message);
+        error: (err: any) => {
+          this.toastService.showError('Failed to load document');
           this.isLoadingDocument = false;
           this.cdr.markForCheck();
         }
@@ -566,8 +862,8 @@ export class AdminDashboard implements OnInit {
 
   loadNotifications() {
     this.notificationService.getMyNotifications().subscribe({
-      next: d => { 
-        this.notifications = d; 
+      next: d => {
+        this.notifications = d;
         this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
         this.cdr.detectChanges();
       },
@@ -594,20 +890,20 @@ export class AdminDashboard implements OnInit {
     this.patientCitizenDetails = null;
     this.patientEmergencyDetails = null;
     this.patientTreatments = [];
-    this.activeTab = 'patientDetail';
-    
+    this.setTab('patientDetail');
+
     // Load citizen details
-    this.http.get<any>(`http://localhost:9090/api/citizens/${patient.citizenId}`, { headers: this.headers })
+    this.citizenService.getCitizenById(patient.citizenId)
       .subscribe({
         next: d => {
-          this.patientCitizenDetails = d?.data ?? d;
+          this.patientCitizenDetails = d;
           this.cdr.detectChanges();
         },
         error: () => {
           this.patientCitizenDetails = { name: 'Unknown', contactInfo: 'N/A' };
         }
       });
-    
+
     // Load emergency details
     this.http.get<any>(`http://localhost:9090/emergencies/${patient.emergencyId}`, { headers: this.headers })
       .subscribe({
@@ -617,7 +913,7 @@ export class AdminDashboard implements OnInit {
         },
         error: () => {}
       });
-    
+
     // Load treatments
     this.http.get<any>(`http://localhost:9090/patients/${patient.patientId}/treatments`, { headers: this.headers })
       .subscribe({
@@ -634,6 +930,12 @@ export class AdminDashboard implements OnInit {
     this.patientCitizenDetails = null;
     this.patientEmergencyDetails = null;
     this.patientTreatments = [];
-    this.activeTab = 'patientsManagement';
+    this.setTab('patientsManagement');
+  }
+
+  navigateToAdmitPatient() {
+    this.setTab('patientsManagement');
+    this.showAdmitPatient = true;
+    this.loadDispatchedEmergencies();
   }
 }

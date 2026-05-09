@@ -1,28 +1,22 @@
-<app-navbar></app-navbar>
+<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
 
 <div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
       <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
-        <span>📊</span> Overview
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><line x1='3' y1='9' x2='21' y2='9'></line><line x1='9' y1='21' x2='9' y2='9'></line></svg></span> Overview
       </button>
       <button [class.active]="activeTab==='facilities'" (click)="setTab('facilities')">
-        <span>🏥</span> Facility Reports
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg></span> Facilities
       </button>
       <button [class.active]="activeTab==='emergencies'" (click)="setTab('emergencies')">
-        <span>🚨</span> Emergency Reports
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></span> Emergencies
       </button>
       <button [class.active]="activeTab==='patients'" (click)="setTab('patients')">
-        <span>🛏️</span> Patient Reports
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></span> Patients
       </button>
       <button [class.active]="activeTab==='compliance'" (click)="setTab('compliance')">
-        <span>📋</span> Compliance Tracking
-      </button>
-      <button [class.active]="activeTab==='notifications'" (click)="setTab('notifications')">
-        <span>🔔</span> Notifications
-        @if (unreadCount > 0) { 
-          <span class="badge">{{ unreadCount }}</span> 
-        }
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'></path><rect x='8' y='2' width='8' height='4' rx='1' ry='1'></rect></svg></span> Compliance
       </button>
     </nav>
   </aside>
@@ -31,33 +25,33 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>City Health Officer Workbench</h2>
-        <p>Program monitoring, compliance tracking, analytics and reporting</p>
+        <h2>Hello, {{ auth.getUser()?.name || 'Health Officer' }} 👋</h2>
+        <p>Program monitoring, compliance tracking and analytics</p>
       </div>
       <div class="stats-grid">
         <div class="stat-card blue card-interactive" (click)="setTab('facilities')">
-          <div class="stat-icon">🏥</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg></div>
           <div class="stat-info">
-            <span class="stat-value">{{ facilityReports.length }}</span>
-            <span class="stat-label">Facility Reports</span>
+            <span class="stat-value">{{ facilities.length }}</span>
+            <span class="stat-label">Total Facilities</span>
           </div>
         </div>
         <div class="stat-card red card-interactive" (click)="setTab('emergencies')">
-          <div class="stat-icon">🚨</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></div>
           <div class="stat-info">
-            <span class="stat-value">{{ emergencyReports.length }}</span>
-            <span class="stat-label">Emergency Reports</span>
+            <span class="stat-value">{{ emergencies.length }}</span>
+            <span class="stat-label">Active Emergencies</span>
           </div>
         </div>
         <div class="stat-card green card-interactive" (click)="setTab('patients')">
-          <div class="stat-icon">🛏️</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></div>
           <div class="stat-info">
-            <span class="stat-value">{{ patientReports.length }}</span>
-            <span class="stat-label">Patient Reports</span>
+            <span class="stat-value">{{ patients.length }}</span>
+            <span class="stat-label">Total Patients</span>
           </div>
         </div>
         <div class="stat-card purple card-interactive" (click)="setTab('compliance')">
-          <div class="stat-icon">📋</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'></path><rect x='8' y='2' width='8' height='4' rx='1' ry='1'></rect></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ complianceRecords.length }}</span>
             <span class="stat-label">Compliance Records</span>
@@ -70,94 +64,100 @@
         <div class="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-label">Emergency Response Rate</div>
-            <div class="kpi-bar"><div class="kpi-fill" style="width:78%; background:#0ea5e9"></div></div>
-            <div class="kpi-value">78%</div>
+            <div class="kpi-bar"><div class="kpi-fill" [style.width.%]="emergencyResponseRate" style="background:#0ea5e9"></div></div>
+            <div class="kpi-value">{{ emergencyResponseRate }}%</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Patient Recovery Rate</div>
-            <div class="kpi-bar"><div class="kpi-fill" style="width:85%; background:#10b981"></div></div>
-            <div class="kpi-value">85%</div>
+            <div class="kpi-bar"><div class="kpi-fill" [style.width.%]="patientRecoveryRate" style="background:#10b981"></div></div>
+            <div class="kpi-value">{{ patientRecoveryRate }}%</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Compliance Adherence</div>
-            <div class="kpi-bar"><div class="kpi-fill" style="width:92%; background:#8b5cf6"></div></div>
-            <div class="kpi-value">92%</div>
+            <div class="kpi-label">Compliance Pass Rate</div>
+            <div class="kpi-bar"><div class="kpi-fill" [style.width.%]="compliancePassRate" style="background:#8b5cf6"></div></div>
+            <div class="kpi-value">{{ compliancePassRate }}%</div>
           </div>
         </div>
       </div>
     }
 
     @if (activeTab === 'facilities') {
-      <div class="page-header"><h2>Facility Reports</h2></div>
+      <div class="page-header"><h2>Facilities Overview</h2><p>{{ activeFacilities }} active out of {{ facilities.length }} total</p></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Location</th><th>Status</th></tr></thead>
           <tbody>
-            @for (r of facilityReports; track $index) {
+            @for (f of facilities; track f.facilityId || $index) {
               <tr>
-                <td>{{ r.scope || 'Facility' }}</td>
-                <td>{{ r.metrics || r.facilityCount || '-' }}</td>
-                <td>{{ r.generatedDate | date:'medium' }}</td>
+                <td>#{{ f.facilityId }}</td>
+                <td>{{ f.name }}</td>
+                <td>{{ f.type }}</td>
+                <td>{{ f.location || f.address }}</td>
+                <td><span class="status-badge" [ngClass]="(f.status || '').toLowerCase()">{{ f.status }}</span></td>
               </tr>
             }
-            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+            @empty { <tr><td colspan="5" class="empty">No facilities found</td></tr> }
           </tbody>
         </table>
       </div>
     }
 
     @if (activeTab === 'emergencies') {
-      <div class="page-header"><h2>Emergency Reports</h2></div>
+      <div class="page-header"><h2>Emergency Incidents</h2><p>{{ emergencyResponseRate }}% response rate</p></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Location</th><th>Status</th><th>Reported</th></tr></thead>
           <tbody>
-            @for (r of emergencyReports; track $index) {
+            @for (e of emergencies; track e.emergencyId || $index) {
               <tr>
-                <td>{{ r.scope || 'Emergency' }}</td>
-                <td>{{ r.metrics || r.totalCount || '-' }}</td>
-                <td>{{ r.generatedDate | date:'medium' }}</td>
+                <td>#{{ e.emergencyId }}</td>
+                <td>{{ e.type }}</td>
+                <td>{{ e.location }}</td>
+                <td><span class="status-badge" [ngClass]="(e.status || '').toLowerCase()">{{ e.status }}</span></td>
+                <td>{{ e.date | date:'short' }}</td>
               </tr>
             }
-            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+            @empty { <tr><td colspan="5" class="empty">No emergency records</td></tr> }
           </tbody>
         </table>
       </div>
     }
 
     @if (activeTab === 'patients') {
-      <div class="page-header"><h2>Patient Reports</h2></div>
+      <div class="page-header"><h2>Patient Records</h2><p>{{ patientRecoveryRate }}% recovery rate</p></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>Scope</th><th>Metrics</th><th>Generated</th></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Condition</th><th>Status</th><th>Admitted</th></tr></thead>
           <tbody>
-            @for (r of patientReports; track $index) {
+            @for (p of patients; track p.patientId || $index) {
               <tr>
-                <td>{{ r.scope || 'Patient' }}</td>
-                <td>{{ r.metrics || r.admittedCount || '-' }}</td>
-                <td>{{ r.generatedDate | date:'medium' }}</td>
+                <td>#{{ p.patientId }}</td>
+                <td>{{ p.name || p.citizenName || 'Patient #' + p.patientId }}</td>
+                <td>{{ p.condition || p.diagnosis || '-' }}</td>
+                <td><span class="status-badge" [ngClass]="(p.status || '').toLowerCase()">{{ p.status }}</span></td>
+                <td>{{ p.admittedDate || p.createdDate | date:'short' }}</td>
               </tr>
             }
-            @empty { <tr><td colspan="3" class="empty">No reports available</td></tr> }
+            @empty { <tr><td colspan="5" class="empty">No patient records</td></tr> }
           </tbody>
         </table>
       </div>
     }
 
     @if (activeTab === 'compliance') {
-      <div class="page-header"><h2>Compliance Tracking</h2></div>
+      <div class="page-header"><h2>Compliance Tracking</h2><p>{{ compliancePassRate }}% pass rate</p></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>ID</th><th>Entity ID</th><th>Type</th><th>Result</th><th>Date</th><th>Status</th></tr></thead>
+          <thead><tr><th>ID</th><th>Entity</th><th>Type</th><th>Result</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            @for (c of complianceRecords; track c.complianceId) {
+            @for (c of complianceRecords; track c.complianceId || $index) {
               <tr>
                 <td>#{{ c.complianceId }}</td>
                 <td>{{ c.entityId }}</td>
-                <td>{{ c.type }}</td>
-                <td>{{ c.result }}</td>
-                <td>{{ c.date | date }}</td>
-                <td><span class="status-badge" [class]="c.status.toLowerCase()">{{ c.status }}</span></td>
+                <td>{{ c.type || c.entityType }}</td>
+                <td><span class="status-badge" [ngClass]="(c.result || '').toLowerCase()">{{ c.result }}</span></td>
+                <td>{{ c.date || c.createdDate | date:'short' }}</td>
+                <td><span class="status-badge" [ngClass]="(c.status || '').toLowerCase()">{{ c.status }}</span></td>
               </tr>
             }
             @empty { <tr><td colspan="6" class="empty">No compliance records</td></tr> }
@@ -167,7 +167,12 @@
     }
 
     @if (activeTab === 'notifications') {
-      <div class="page-header"><h2>Notifications</h2></div>
+      <div class="page-header">
+        <h2>Notifications</h2>
+        @if (unreadCount > 0) {
+          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Mark All Read</button>
+        }
+      </div>
       <div class="notifications-list">
         @for (n of notifications; track n.notificationId) {
           <div class="notification-item" [class.unread]="n.status==='UNREAD'">
@@ -176,6 +181,9 @@
               <p>{{ n.message }}</p>
               <small>{{ n.createdDate | date:'medium' }}</small>
             </div>
+            @if (n.status === 'UNREAD') {
+              <button class="btn-read" (click)="markRead(n.notificationId)">Mark Read</button>
+            }
           </div>
         }
         @empty { <p class="empty">No notifications</p> }

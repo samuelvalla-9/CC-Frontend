@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -85,4 +85,15 @@ export class AmbulanceService {
     return this.http.get<ApiResponse<Ambulance[]>>(`${this.API}/available`, { headers: this.headers })
       .pipe(map(res => res.data));
   }
+
+  updateAmbulanceStatus(id: number, status: string): Observable<Ambulance> {
+    return this.http.patch<ApiResponse<Ambulance>>(`${this.API}/${id}/status?status=${status}`, {}, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  deleteAmbulance(id: number): Observable<any> {
+    return this.http.delete<ApiResponse<any>>(`${this.API}/${id}`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
 }
+

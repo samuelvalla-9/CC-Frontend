@@ -14,9 +14,9 @@ export interface CreateStaffRequest {
   name: string;
   email: string;
   password: string;
-  phone?: string;
-  role?: string;
-  facilityId?: number;
+  phone: string;
+  role: string;
+  facilityId: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -98,9 +98,15 @@ export class AdminService {
       }));
   }
 
-  // Staff Management
+  // Staff Management (AuthService only - no facility record)
   createStaff(data: CreateStaffRequest): Observable<User> {
     return this.http.post<ApiResponse<User>>(`${this.API}/staff`, data, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  // Create staff via FacilityService - creates entries in BOTH users table (Auth) and staff table (Facility)
+  createStaffViaFacility(data: CreateStaffRequest): Observable<any> {
+    return this.http.post<ApiResponse<any>>('http://localhost:9090/staff', data, { headers: this.headers })
       .pipe(map(res => res.data));
   }
 

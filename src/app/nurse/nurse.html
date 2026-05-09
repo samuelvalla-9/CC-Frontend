@@ -1,22 +1,16 @@
-<app-navbar></app-navbar>
+﻿<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
 
 <div class="dashboard">
   <aside class="sidebar">
     <nav>
-      <button [class.active]="activeTab==='overview'" (click)="activeTab='overview'">
-        <span>📊</span> Overview
+      <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><line x1='3' y1='9' x2='21' y2='9'></line><line x1='9' y1='21' x2='9' y2='9'></line></svg></span> Overview
       </button>
-      <button [class.active]="activeTab==='patients'" (click)="activeTab='patients'">
+      <button [class.active]="activeTab==='patients'" (click)="setTab('patients')">
         <span>🧑‍⚕️</span> My Patients
       </button>
-      <button [class.active]="activeTab==='myTreatments'" (click)="activeTab='myTreatments'">
-        <span>💊</span> My Treatments
-      </button>
-      <button [class.active]="activeTab==='notifications'" (click)="activeTab='notifications'">
-        <span>🔔</span> Notifications
-        @if (unreadCount > 0) { 
-          <span class="badge">{{ unreadCount }}</span> 
-        }
+      <button [class.active]="activeTab==='myTreatments'" (click)="setTab('myTreatments')">
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg></span> My Treatments
       </button>
     </nav>
   </aside>
@@ -25,7 +19,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Nurse Dashboard</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Nurse' }} 👋</h2>
         <p>Manage patient care and execute treatments</p>
       </div>
       <div class="stats-grid">
@@ -37,7 +31,7 @@
           </div>
         </div>
         <div class="stat-card blue">
-          <div class="stat-icon">🏥</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ admittedCount }}</span>
             <span class="stat-label">Admitted</span>
@@ -51,14 +45,14 @@
           </div>
         </div>
         <div class="stat-card purple">
-          <div class="stat-icon">💊</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ myTreatments.length }}</span>
             <span class="stat-label">My Treatments</span>
           </div>
         </div>
         <div class="stat-card yellow">
-          <div class="stat-icon">🔔</div>
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'></path><path d='M13.73 21a2 2 0 0 1-3.46 0'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ unreadCount }}</span>
             <span class="stat-label">Unread Alerts</span>
@@ -72,21 +66,26 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Citizen ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
+            <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Assigned Doctor</th><th>Action</th></tr>
           </thead>
           <tbody>
             @for (p of patients; track p.patientId) {
               <tr>
                 <td>#{{ p.patientId }}</td>
                 <td>{{ p.citizenId }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
                 <td>{{ p.ward || 'N/A' }}</td>
                 <td>{{ p.admissionDate | date }}</td>
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
                 <td><strong>{{ getAssignedDoctorName(p.patientId) }}</strong></td>
-                <td><button class="btn-primary btn-sm" (click)="togglePatientDetails(p)">View Details</button></td>
+                <td>
+                  <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:stretch;">
+                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="togglePatientDetails(p)">View Details</button>
+                  </div>
+                </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No patients found</td></tr> }
+            @empty { <tr><td colspan="8" class="empty">No patients found</td></tr> }
           </tbody>
         </table>
       </div>
@@ -101,23 +100,33 @@
       <div class="patient-detail-view">
         <div class="info-cards-grid">
           <div class="detail-card">
-            <h3>🏥 Patient Information</h3>
+            <h3><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg> Patient Information</h3>
             <div class="detail-grid">
               <div class="detail-item"><span>Patient ID:</span><strong>#{{ selectedPatient.patientId }}</strong></div>
               <div class="detail-item"><span>Citizen ID:</span><strong>{{ selectedPatient.citizenId }}</strong></div>
               <div class="detail-item"><span>Emergency ID:</span><strong>{{ selectedPatient.emergencyId }}</strong></div>
               <div class="detail-item"><span>Ward:</span><strong>{{ selectedPatient.ward || 'N/A' }}</strong></div>
               <div class="detail-item"><span>Admission Date:</span><strong>{{ selectedPatient.admissionDate | date }}</strong></div>
-              <div class="detail-item"><span>Status:</span><span class="status-badge" [class]="selectedPatient.status.toLowerCase()">{{ selectedPatient.status }}</span></div>
-              <div class="detail-item">
-                <span>Update Status:</span>
-                <select [(ngModel)]="selectedPatient.status" (change)="updatePatientStatus(selectedPatient.patientId, selectedPatient.status)" class="status-select">
-                  <option value="ADMITTED">Admitted</option>
-                  <option value="UNDER_TREATMENT">Under Treatment</option>
-                  <option value="CRITICAL">Critical</option>
-                  <option value="DISCHARGED">Discharged</option>
-                </select>
-              </div>
+              <div class="detail-item"><span>Status:</span><span class="status-badge" [class]="selectedPatient.status.toLowerCase()" [class.status-highlight]="statusHighlight">{{ selectedPatient.status }}</span></div>
+              @if (selectedPatient.status !== 'DISCHARGED') {
+                <div class="detail-item">
+                  <span>Update Status:</span>
+                  <div style="display:flex;gap:0.5rem">
+                    @if (selectedPatient.status !== 'UNDER_OBSERVATION') {
+                      <button class="btn-sm btn-warning" (click)="updatePatientStatus(selectedPatient.patientId, 'UNDER_OBSERVATION')">
+                        <svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg>
+                        Mark Under Observation
+                      </button>
+                    }
+                    @if (selectedPatient.status !== 'STABLE') {
+                      <button class="btn-sm btn-success" (click)="updatePatientStatus(selectedPatient.patientId, 'STABLE')">
+                        <svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg>
+                        Mark Stable
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
             </div>
             @if (selectedPatient.notes) {
               <div class="notes-section">
@@ -129,7 +138,7 @@
 
           @if (citizenDetails) {
             <div class="detail-card">
-              <h3>👤 Citizen Information</h3>
+              <h3><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg> Citizen Information</h3>
               <div class="detail-grid">
                 <div class="detail-item"><span>Name:</span><strong>{{ citizenDetails.name }}</strong></div>
                 <div class="detail-item"><span>Contact:</span><strong>{{ citizenDetails.contactInfo }}</strong></div>
@@ -139,7 +148,7 @@
 
           @if (emergencyDetails) {
             <div class="detail-card emergency-card">
-              <h3>🚨 Emergency Details</h3>
+              <h3><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg> Emergency Details</h3>
               <div class="detail-grid">
                 <div class="detail-item"><span>Type:</span><strong class="emergency-type">{{ emergencyDetails.type }}</strong></div>
                 <div class="detail-item"><span>Location:</span><strong>{{ emergencyDetails.location }}</strong></div>
@@ -159,32 +168,40 @@
         <div class="treatments-card">
           <div class="section-header">
             <h3>Treatment History</h3>
-            @if (showTreatmentForm !== selectedPatient.patientId && selectedPatient.status === 'ADMITTED') {
-              <button class="btn-primary" (click)="openTreatmentForm(selectedPatient)">💊 Add Treatment</button>
+            @if (showTreatmentForm !== selectedPatient.patientId && selectedPatient.status !== 'DISCHARGED') {
+              <button class="btn-primary" (click)="openTreatmentForm(selectedPatient)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg> Add Treatment</button>
             }
           </div>
 
           @if (showTreatmentForm === selectedPatient.patientId) {
             <div class="treatment-form">
-              @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
-              <form (ngSubmit)="addTreatment()">
+              <form [formGroup]="treatmentForm" (ngSubmit)="addTreatment()">
                 <div class="form-group">
                   <label>Description / Diagnosis</label>
-                  <textarea [(ngModel)]="treatmentForm.description" name="description" rows="3" placeholder="Describe the treatment..." required></textarea>
+                  <textarea formControlName="description" rows="3" placeholder="Describe the treatment..."></textarea>
+                  @if (treatmentForm.get('description')?.touched && treatmentForm.get('description')?.errors) {
+                    <small class="field-error">Description is required</small>
+                  }
                 </div>
                 <div class="form-row">
                   <div class="form-group">
                     <label>Medication Name</label>
-                    <input type="text" [(ngModel)]="treatmentForm.medicationName" name="medicationName" placeholder="e.g. Paracetamol" required />
+                    <input type="text" formControlName="medicationName" placeholder="e.g. Paracetamol" />
+                    @if (treatmentForm.get('medicationName')?.touched && treatmentForm.get('medicationName')?.errors) {
+                      <small class="field-error">Medication name is required</small>
+                    }
                   </div>
                   <div class="form-group">
                     <label>Dosage</label>
-                    <input type="text" [(ngModel)]="treatmentForm.dosage" name="dosage" placeholder="e.g. 500mg twice daily" required />
+                    <input type="text" formControlName="dosage" placeholder="e.g. 500mg twice daily" />
+                    @if (treatmentForm.get('dosage')?.touched && treatmentForm.get('dosage')?.errors) {
+                      <small class="field-error">Dosage is required</small>
+                    }
                   </div>
                 </div>
                 <div class="form-actions">
-                  <button type="submit" class="btn-primary">💊 Add Treatment</button>
-                  <button type="button" class="btn-secondary" (click)="cancelTreatmentForm()">Cancel</button>
+                  <button type="submit" class="btn-primary" [disabled]="isSubmittingTreatment"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg> {{ isSubmittingTreatment ? 'Adding...' : 'Add Treatment' }}</button>
+                  <button type="button" class="btn-secondary" (click)="cancelTreatmentForm()">✕ Cancel</button>
                 </div>
               </form>
             </div>
@@ -204,7 +221,7 @@
                 <p class="treatment-date"><strong>Date:</strong> {{ t.startDate || t.date | date }}</p>
                 @if (t.status === 'ONGOING') {
                   <div class="treatment-actions">
-                    <button class="btn-sm btn-success" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')">✓ Complete</button>
+                    <button class="btn-sm btn-success" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Complete</button>
                     <button class="btn-sm btn-danger" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">✕ Cancel</button>
                   </div>
                 }
@@ -245,7 +262,7 @@
       <div class="page-header">
         <h2>Notifications</h2>
         @if (unreadCount > 0) {
-          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto">✓ Mark All Read</button>
+          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Mark All Read</button>
         }
       </div>
       <div class="notifications-list">
@@ -267,3 +284,4 @@
 
   </main>
 </div>
+

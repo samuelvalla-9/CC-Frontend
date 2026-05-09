@@ -59,6 +59,31 @@ export class PatientService {
       .pipe(map(res => res.data));
   }
 
+  getPatientsByFacility(facilityId: number): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(`${this.API}/facility/${facilityId}`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  getUnassignedPatients(): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(`${this.API}/unassigned`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  getUnassignedPatientsByFacility(facilityId: number): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(`${this.API}/facility/${facilityId}/unassigned`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  getPatientsByDoctor(doctorId: number): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(`${this.API}/doctor/${doctorId}`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
+  getPatientsByFacilityAndDoctor(facilityId: number, doctorId: number): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(`${this.API}/facility/${facilityId}/doctor/${doctorId}`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
   getEmergencyForPatient(id: number): Observable<any> {
     return this.http.get<ApiResponse<any>>(`${this.API}/${id}/emergency`, { headers: this.headers })
       .pipe(map(res => res.data));

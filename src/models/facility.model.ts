@@ -1,7 +1,6 @@
 export enum FacilityType {
   HOSPITAL = 'HOSPITAL',
-  CLINIC = 'CLINIC',
-  AMBULANCE_STATION = 'AMBULANCE_STATION'
+  CLINIC = 'CLINIC'
 }
 
 export enum FacilityStatus {
@@ -47,4 +46,5 @@ export interface Ambulance {
 export interface AmbulanceRequest {
   vehicleNumber: string;
   model?: string;
+  facilityId?: number;
 }

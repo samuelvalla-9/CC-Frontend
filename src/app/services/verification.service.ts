@@ -19,6 +19,7 @@ export class VerificationService {
   
   pendingCount$ = this.pendingCountSubject.asObservable();
   pendingCitizens$ = this.pendingCitizensSubject.asObservable();
+  private loaded = false;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -26,7 +27,10 @@ export class VerificationService {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
   }
 
-  loadPendingVerifications(): Observable<void> {
+  loadPendingVerifications(force = false): Observable<void> {
+    if (this.loaded && !force) {
+      return new Observable(observer => { observer.next(); observer.complete(); });
+    }
     return new Observable(observer => {
       this.http.get<any>(this.API, { headers: this.headers })
         .subscribe({
@@ -39,6 +43,7 @@ export class VerificationService {
             if (citizens.length === 0) {
               this.pendingCountSubject.next(0);
               this.pendingCitizensSubject.next([]);
+              this.loaded = true;
               observer.next();
               observer.complete();
               return;
@@ -66,6 +71,7 @@ export class VerificationService {
                     if (processed === citizens.length) {
                       this.pendingCountSubject.next(totalPending);
                       this.pendingCitizensSubject.next(pendingList);
+                      this.loaded = true;
                       observer.next();
                       observer.complete();
                     }
@@ -75,6 +81,7 @@ export class VerificationService {
                     if (processed === citizens.length) {
                       this.pendingCountSubject.next(totalPending);
                       this.pendingCitizensSubject.next(pendingList);
+                      this.loaded = true;
                       observer.next();
                       observer.complete();
                     }
@@ -98,6 +105,6 @@ export class VerificationService {
   }
 
   refreshVerifications(): void {
-    this.loadPendingVerifications().subscribe();
+    this.loadPendingVerifications(true).subscribe();
   }
 }

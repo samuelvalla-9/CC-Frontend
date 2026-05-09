@@ -1,6 +1,8 @@
 export enum PatientStatus {
   ADMITTED = 'ADMITTED',
   UNDER_TREATMENT = 'UNDER_TREATMENT',
+  UNDER_OBSERVATION = 'UNDER_OBSERVATION',
+  STABLE = 'STABLE',
   DISCHARGED = 'DISCHARGED',
   CRITICAL = 'CRITICAL'
 }
@@ -19,6 +21,7 @@ export interface Patient {
   name?: string;
   facilityId?: number;
   facilityName?: string;
+  assignedStaffId?: number;
   admissionDate: string;
   dischargeDate?: string;
   ward?: string;

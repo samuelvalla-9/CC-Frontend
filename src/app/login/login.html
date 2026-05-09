@@ -1,52 +1,113 @@
-<div class="login-container">
-  <div class="login-card">
-    <div class="brand">
-      <span class="brand-icon">🏥</span>
-      <h1>CityCare</h1>
-      <p class="tagline">Urban Healthcare & Emergency Response</p>
-    </div>
-    
-    <div class="tabs">
-      <button [class.active]="!isRegister" (click)="isRegister = false">Login</button>
-      <button [class.active]="isRegister" (click)="isRegister = true">Register</button>
-    </div>
-
-    <form (ngSubmit)="onSubmit()">
-      @if (isRegister) {
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" [(ngModel)]="name" name="name" placeholder="Enter your name" required />
-        </div>
-      }
-      
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" [(ngModel)]="email" name="email" placeholder="Enter email" required />
+<div class='login-layout'>
+  <div class='brand-bg-pattern'></div>
+  <div class='login-form-container'>
+    <div class='brand-header'>
+      <div class='logo'>
+        <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 12h-4l-3 9L9 3l-3 9H2'/></svg>
       </div>
-      
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" [(ngModel)]="password" name="password" placeholder="Enter password" required />
-      </div>
+      <h1>CityCare Enterprise</h1>
+      <p>Integrated Urban Healthcare & Emergency Response Platform</p>
+    </div>
+    <div class='tabs-switcher glass-panel'>
+      <button type='button' [class.active]='!isRegister' (click)='isRegister = false'>Log In</button>
+      <button type='button' [class.active]='isRegister' (click)='isRegister = true'>Register</button>
+    </div>
 
-      @if (isRegister) {
-        <div class="form-group">
-          <label>Role</label>
-          <select [(ngModel)]="role" name="role">
-            @for (r of roles; track r) {
-              <option [value]="r">{{ r }}</option>
-            }
-          </select>
+    <!-- LOGIN FORM -->
+    @if (!isRegister) {
+      <form [formGroup]="loginForm" (ngSubmit)='onSubmit()' class='enterprise-form'>
+        <div class='form-group glass-panel'>
+          <label for='login-email'>Email Address</label>
+          <input type='email' formControlName='email' id='login-email' placeholder='Enter your email' autocomplete='email' />
+          @if (f['email'].touched && f['email'].errors) {
+            <small class="field-error">
+              @if (f['email'].errors['required']) { Email is required }
+              @if (f['email'].errors['email']) { Please enter a valid email address }
+            </small>
+          }
         </div>
-      }
+        <div class='form-group glass-panel'>
+          <label for='login-password'>Password</label>
+          <input type='password' formControlName='password' id='login-password' placeholder='Enter your password' autocomplete='current-password' />
+          @if (f['password'].touched && f['password'].errors) {
+            <small class="field-error">Password is required</small>
+          }
+        </div>
+        @if (error) {
+          <div class='alert error glass-panel'>
+            <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg>
+            <span>{{ error }}</span>
+          </div>
+        }
+        <button type='submit' class='btn-submit glass-panel-button' [disabled]='loading'>
+          @if(loading) {
+            <span class='spinner'></span> Processing...
+          } @else {
+            Sign In to Dashboard
+          }
+        </button>
+      </form>
+    }
 
-      @if (error) {
-        <div class="error">{{ error }}</div>
-      }
-
-      <button type="submit" class="btn-submit" [disabled]="loading">
-        {{ loading ? 'Processing...' : (isRegister ? 'Register' : 'Login') }}
-      </button>
-    </form>
+    <!-- REGISTER FORM -->
+    @if (isRegister) {
+      <form [formGroup]="registerForm" (ngSubmit)='onSubmit()' class='enterprise-form'>
+        <div class='form-group glass-panel'>
+          <label for='reg-name'>Full Name</label>
+          <input type='text' formControlName='name' id='reg-name' placeholder='Enter your full name' />
+          @if (r['name'].touched && r['name'].errors) {
+            <small class="field-error">
+              @if (r['name'].errors['required']) { Full name is required }
+              @else if (r['name'].errors['minlength']) { Name must be at least 2 characters }
+              @else if (r['name'].errors['pattern']) { Name must contain only letters and spaces }
+            </small>
+          }
+        </div>
+        <div class='form-group glass-panel'>
+          <label for='reg-email'>Email Address</label>
+          <input type='email' formControlName='email' id='reg-email' placeholder='Enter your email' />
+          @if (r['email'].touched && r['email'].errors) {
+            <small class="field-error">
+              @if (r['email'].errors['required']) { Email is required }
+              @else if (r['email'].errors['email']) { Please enter a valid email address }
+            </small>
+          }
+        </div>
+        <div class='form-group glass-panel'>
+          <label for='reg-phone'>Phone Number</label>
+          <input type='tel' formControlName='phone' id='reg-phone' placeholder='10-digit phone number' />
+          @if (r['phone'].touched && r['phone'].errors) {
+            <small class="field-error">
+              @if (r['phone'].errors['required']) { Phone number is required }
+              @else if (r['phone'].errors['pattern']) { Enter a valid 10-digit phone number }
+            </small>
+          }
+        </div>
+        <div class='form-group glass-panel'>
+          <label for='reg-password'>Password</label>
+          <input type='password' formControlName='password' id='reg-password' placeholder='Min 8 chars, uppercase, lowercase & number' />
+          @if (r['password'].touched && r['password'].errors) {
+            <small class="field-error">
+              @if (r['password'].errors['required']) { Password is required }
+              @else if (r['password'].errors['minlength']) { Password must be at least 8 characters }
+              @else if (r['password'].errors['pattern']) { Must include uppercase, lowercase and a number }
+            </small>
+          }
+        </div>
+        @if (error) {
+          <div class='alert error glass-panel'>
+            <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg>
+            <span>{{ error }}</span>
+          </div>
+        }
+        <button type='submit' class='btn-submit glass-panel-button' [disabled]='loading'>
+          @if(loading) {
+            <span class='spinner'></span> Processing...
+          } @else {
+            Register Account
+          }
+        </button>
+      </form>
+    }
   </div>
 </div>

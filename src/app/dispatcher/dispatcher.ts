@@ -9,6 +9,7 @@ import { NotificationService } from '../services/notification.service';
 import { Emergency } from '../../models/emergency.model';
 import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-dispatcher',
@@ -19,9 +20,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 export class DispatcherDashboard implements OnInit {
   activeTab = 'overview';
   pendingEmergencies: Emergency[] = [];
+  dispatchedEmergencies: any[] = [];
   notifications: Notification[] = [];
   unreadCount = 0;
   availableAmbulances: any[] = [];
+  dispatchingEmergencyId: number | null = null;
+  isSubmitting = false;
 
   dispatchForm = { emergencyId: '', ambulanceId: '' };
   errorMsg = '';
@@ -32,11 +36,12 @@ export class DispatcherDashboard implements OnInit {
 
   constructor(
     private http: HttpClient, 
-    private auth: AuthService, 
+    public auth: AuthService, 
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   ngOnInit() {
@@ -48,6 +53,7 @@ export class DispatcherDashboard implements OnInit {
     });
 
     this.loadPending();
+    this.loadDispatchHistory();
     this.loadNotifications();
     this.loadAvailableAmbulances();
   }
@@ -61,9 +67,9 @@ export class DispatcherDashboard implements OnInit {
   }
 
   private handleTabChange(tab: string) {
-    if (tab === 'pending') this.loadPending();
+    if (tab === 'overview') { this.loadPending(); this.loadAvailableAmbulances(); }
+    if (tab === 'history') this.loadDispatchHistory();
     if (tab === 'notifications') this.loadNotifications();
-    if (tab === 'dispatch') this.loadAvailableAmbulances();
   }
 
   loadPending() {
@@ -74,6 +80,17 @@ export class DispatcherDashboard implements OnInit {
           this.cdr.detectChanges();
         }, 
         error: () => {} 
+      });
+  }
+
+  loadDispatchHistory() {
+    this.http.get<any>('http://localhost:9090/emergencies/dispatched', { headers: this.headers })
+      .subscribe({
+        next: d => {
+          this.dispatchedEmergencies = d?.data ?? d ?? [];
+          this.cdr.detectChanges();
+        },
+        error: () => {}
       });
   }
 
@@ -111,43 +128,51 @@ export class DispatcherDashboard implements OnInit {
           this.cdr.detectChanges();
         }, 
         error: (err) => {
-          console.error('Failed to load ambulances:', err);
+          this.toastService.showError('Failed to load ambulances');
         } 
       });
   }
 
-  dispatch(e: Emergency) {
+  startDispatch(e: Emergency) {
+    this.dispatchingEmergencyId = e.emergencyId;
     this.dispatchForm.emergencyId = String(e.emergencyId);
-    this.dispatchForm.ambulanceId = ''; // Reset ambulance selection
-    this.loadAvailableAmbulances(); // Refresh available ambulances
-    this.setTab('dispatch');
+    this.dispatchForm.ambulanceId = '';
+    this.loadAvailableAmbulances();
   }
 
-  submitDispatch() {
+  cancelDispatch() {
+    this.dispatchingEmergencyId = null;
+    this.dispatchForm = { emergencyId: '', ambulanceId: '' };
+  }
+
+  confirmDispatch(e: Emergency) {
     if (!this.dispatchForm.ambulanceId) {
-      this.errorMsg = 'Please select an ambulance';
+      this.toastService.showError('Please select an ambulance');
       return;
     }
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
     
-    this.errorMsg = '';
-    const userId = this.auth.getUser()?.id;
     const headers = new HttpHeaders({
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': String(userId)
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
     
-    this.http.post<any>(`http://localhost:9090/emergencies/${this.dispatchForm.emergencyId}/dispatch`,
+    this.http.post<any>(`http://localhost:9090/emergencies/${e.emergencyId}/dispatch`,
       { ambulanceId: Number(this.dispatchForm.ambulanceId) }, { headers })
       .subscribe({
         next: () => { 
+          this.isSubmitting = false;
+          this.dispatchingEmergencyId = null;
           this.dispatchForm = { emergencyId: '', ambulanceId: '' };
-          this.setTab('overview');
+          this.toastService.showSuccess('Ambulance dispatched successfully');
           this.loadPending();
+          this.loadDispatchHistory();
           this.loadAvailableAmbulances();
           this.cdr.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = 'Failed to dispatch ambulance: ' + (err.error?.message || err.message);
+          this.isSubmitting = false;
+          this.toastService.showError('Failed to dispatch ambulance');
         }
       });
   }

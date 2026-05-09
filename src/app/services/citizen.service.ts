@@ -38,10 +38,8 @@ export class CitizenService {
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   private get headers() {
-    const userId = this.auth.getUser()?.id;
     return new HttpHeaders({ 
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': userId?.toString() || ''
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
   }
 
@@ -88,10 +86,8 @@ export class CitizenService {
   uploadDocument(citizenId: number, file: File): Observable<CitizenDocument> {
     const formData = new FormData();
     formData.append('file', file);
-    const userId = this.auth.getUser()?.id;
     const uploadHeaders = new HttpHeaders({ 
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': userId?.toString() || ''
+      Authorization: `Bearer ${this.auth.getToken()}`
     });
     return this.http.post<ApiResponse<CitizenDocument>>(`${this.API}/${citizenId}/documents`, formData, { headers: uploadHeaders })
       .pipe(

@@ -25,6 +25,11 @@ export class EmergencyService {
       .pipe(map(res => res.data));
   }
 
+  getAllEmergencies(): Observable<Emergency[]> {
+    return this.http.get<ApiResponse<Emergency[]>>(this.API, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
   getMyEmergencies(): Observable<Emergency[]> {
     return this.http.get<ApiResponse<Emergency[]>>(`${this.API}/my`, { headers: this.headers })
       .pipe(map(res => res.data));
@@ -41,11 +46,7 @@ export class EmergencyService {
   }
 
   dispatchAmbulance(emergencyId: number, dispatcherId: number, request: any): Observable<Emergency> {
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${this.auth.getToken()}`,
-      'X-Auth-UserId': dispatcherId.toString()
-    });
-    return this.http.post<ApiResponse<Emergency>>(`${this.API}/${emergencyId}/dispatch`, request, { headers })
+    return this.http.post<ApiResponse<Emergency>>(`${this.API}/${emergencyId}/dispatch`, request, { headers: this.headers })
       .pipe(map(res => res.data));
   }
 
