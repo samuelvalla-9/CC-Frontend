@@ -18,9 +18,75 @@
   <main class="content">
 
     @if (activeTab === 'overview') {
+      @if (pendingEmergencies.length > 0) {
+        <div class="page-header" style="margin-top:0">
+          <h2 style="display:flex;align-items:center;gap:0.5rem">
+            <svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'></path><line x1='12' y1='9' x2='12' y2='13'></line><line x1='12' y1='17' x2='12.01' y2='17'></line></svg>
+            Pending Emergencies
+          </h2>
+        </div>
+        @for (e of pendingEmergencies; track e.emergencyId) {
+          <div class="form-card dispatch-card" style="margin-bottom:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+              <div style="display:flex;align-items:center;gap:0.75rem">
+                <span class="status-badge pending" style="font-size:0.85rem">{{ e.type.replace('_', ' ') }}</span>
+                <span style="color:var(--gray-400);font-size:0.85rem">#{{ e.emergencyId }}</span>
+              </div>
+              <span style="color:var(--gray-400);font-size:0.8rem">{{ e.date | date:'medium' }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
+              <div>
+                <p style="margin:0.25rem 0;display:flex;align-items:center;gap:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'></path><circle cx='12' cy='10' r='3'></circle></svg><strong>Location:</strong> {{ e.location }}</p>
+                <p style="margin:0.25rem 0;display:flex;align-items:center;gap:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg><strong>Citizen:</strong> #{{ e.citizenId }}</p>
+                @if (e.description) {
+                  <p style="margin:0.25rem 0;color:var(--gray-500);word-break:break-word;display:flex;align-items:flex-start;gap:0.5rem"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'></path><polyline points='14 2 14 8 20 8'></polyline></svg><strong>Description:</strong> {{ e.description }}</p>
+                }
+              </div>
+              <div style="min-width:220px">
+                @if (dispatchingEmergencyId !== e.emergencyId) {
+                  <button class="btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem" (click)="startDispatch(e)" [disabled]="availableAmbulances.length === 0">
+                    <svg class='icon' viewBox='0 0 24 24' width='1.05em' height='1.05em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><rect x='1' y='3' width='15' height='13'></rect><polygon points='16 8 20 8 23 11 23 16 16 16 16 8'></polygon><circle cx='5.5' cy='18.5' r='2.5'></circle><circle cx='18.5' cy='18.5' r='2.5'></circle></svg>
+                    Dispatch Ambulance
+                  </button>
+                  @if (availableAmbulances.length === 0) {
+                    <small class="error-text" style="text-align:center;display:block;margin-top:0.5rem">No ambulances available</small>
+                  }
+                } @else {
+                  <div style="display:flex;flex-direction:column;gap:0.5rem">
+                    <select [(ngModel)]="dispatchForm.ambulanceId" name="amb" style="padding:0.5rem;border-radius:6px;border:1px solid var(--gray-200)">
+                      <option value="">-- Select Ambulance --</option>
+                      @for (amb of availableAmbulances; track amb.ambulanceId) {
+                        <option [value]="amb.ambulanceId">{{ amb.vehicleNumber }}@if (amb.model) { ({{ amb.model }})}</option>
+                      }
+                    </select>
+                    <div style="display:flex;gap:0.5rem">
+                      <button class="btn-primary btn-sm" style="flex:1;display:flex;align-items:center;justify-content:center;gap:0.35rem" (click)="confirmDispatch(e)" [disabled]="!dispatchForm.ambulanceId || isSubmitting">
+                        @if (isSubmitting) { <span class="spinner"></span> } @else {
+                          <svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><polyline points='20 6 9 17 4 12'></polyline></svg>
+                          Confirm
+                        }
+                      </button>
+                      <button class="btn-secondary btn-sm" style="display:flex;align-items:center;justify-content:center" (click)="cancelDispatch()" [disabled]="isSubmitting">
+                        <svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      }
+
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Dispatcher' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Dispatcher' }}</h2>
         <p>Review pending emergencies and dispatch ambulances</p>
+        @if (staffFacilityName) {
+          <div class="facility-highlight" title="Your assigned hospital">
+            <span class="facility-label">Hospital</span>
+            <strong class="facility-name">{{ staffFacilityName }}</strong>
+          </div>
+        }
       </div>
       <div class="stats-grid">
         <div class="stat-card" [ngClass]="pendingEmergencies.length > 0 ? 'red' : 'green'">
@@ -53,54 +119,48 @@
         </div>
       </div>
 
-      @if (pendingEmergencies.length > 0) {
-        <div class="page-header" style="margin-top:2rem"><h2>🚨 Pending Emergencies</h2></div>
-        @for (e of pendingEmergencies; track e.emergencyId) {
-          <div class="form-card dispatch-card" style="margin-bottom:1rem">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-              <div style="display:flex;align-items:center;gap:0.75rem">
-                <span class="status-badge pending" style="font-size:0.85rem">{{ e.type.replace('_', ' ') }}</span>
-                <span style="color:var(--gray-400);font-size:0.85rem">#{{ e.emergencyId }}</span>
-              </div>
-              <span style="color:var(--gray-400);font-size:0.8rem">{{ e.date | date:'medium' }}</span>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start">
-              <div>
-                <p style="margin:0.25rem 0"><strong>📍 Location:</strong> {{ e.location }}</p>
-                <p style="margin:0.25rem 0"><strong>👤 Citizen:</strong> #{{ e.citizenId }}</p>
-                @if (e.description) {
-                  <p style="margin:0.25rem 0;color:var(--gray-500);word-break:break-word"><strong>📝</strong> {{ e.description }}</p>
-                }
-              </div>
-              <div style="min-width:220px">
-                @if (dispatchingEmergencyId !== e.emergencyId) {
-                  <button class="btn-primary" style="width:100%" (click)="startDispatch(e)" [disabled]="availableAmbulances.length === 0">
-                    🚑 Dispatch Ambulance
-                  </button>
-                  @if (availableAmbulances.length === 0) {
-                    <small class="error-text" style="text-align:center;display:block;margin-top:0.5rem">No ambulances available</small>
-                  }
-                } @else {
-                  <div style="display:flex;flex-direction:column;gap:0.5rem">
-                    <select [(ngModel)]="dispatchForm.ambulanceId" name="amb" style="padding:0.5rem;border-radius:6px;border:1px solid var(--gray-200)">
-                      <option value="">-- Select Ambulance --</option>
-                      @for (amb of availableAmbulances; track amb.ambulanceId) {
-                        <option [value]="amb.ambulanceId">{{ amb.vehicleNumber }}@if (amb.model) { ({{ amb.model }})}</option>
-                      }
-                    </select>
-                    <div style="display:flex;gap:0.5rem">
-                      <button class="btn-primary btn-sm" style="flex:1" (click)="confirmDispatch(e)" [disabled]="!dispatchForm.ambulanceId || isSubmitting">
-                        @if (isSubmitting) { <span class="spinner"></span> } @else { ✓ Confirm }
-                      </button>
-                      <button class="btn-secondary btn-sm" (click)="cancelDispatch()">✕</button>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>Dispatch Throughput (Past 7 Days)</h3>
+            <span class="panel-subtext">Daily completed dispatches</span>
           </div>
-        }
-      } @else {
+          <div class="dispatch-chart">
+            @for (point of dispatchTrend7d; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
+                <span class="chart-value">{{ point.count }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" [style.height.%]="getDispatchBarHeight(point.count)"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="overview-panel activity-panel">
+          <div class="panel-header">
+            <h3>Recent Operations</h3>
+            <span class="panel-subtext">Latest dispatch and alert events</span>
+          </div>
+          <div class="activity-feed">
+            @if (recentOperations.length === 0) {
+              <div class="empty-activity">No recent operations available.</div>
+            } @else {
+              @for (item of recentOperations; track $index) {
+                <div class="activity-item" [ngClass]="getOperationSeverityClass(item.severity)">
+                  <div class="activity-content">
+                    <p class="activity-message">{{ item.message }}</p>
+                    <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      </div>
+
+      @if (pendingEmergencies.length === 0) {
         <div class="form-card" style="margin-top:2rem;text-align:center;padding:3rem">
           <svg class='icon' viewBox='0 0 24 24' width='3em' height='3em' stroke='currentColor' stroke-width='1.5' fill='none' style="opacity:0.3"><polyline points='20 6 9 17 4 12'></polyline></svg>
           <h3 style="color:var(--gray-400);margin-top:1rem">All Clear</h3>
@@ -126,7 +186,7 @@
                 <td>{{ e.location }}</td>
                 <td>{{ e.citizenId }}</td>
                 <td><span class="status-badge" [ngClass]="(e.status || '').toLowerCase()">{{ e.status }}</span></td>
-                <td>{{ e.date | date:'short' }}</td>
+                <td>{{ (e.dispatchedAt ?? e.updatedAt ?? e.createdAt ?? e.date) | date:'short' }}</td>
               </tr>
             }
             @empty { <tr><td colspan="6" class="empty">No dispatch history yet</td></tr> }

@@ -1,16 +1,16 @@
 ﻿<app-navbar [unreadCount]="unreadCount" [notifications]="notifications" (markRead)="markRead($event)" (markAllRead)="markAllRead()"></app-navbar>
 
-<div class="dashboard">
+<div class="dashboard fade-in">
   <aside class="sidebar">
     <nav>
       <button [class.active]="activeTab==='overview'" (click)="setTab('overview')">
         <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><line x1='3' y1='9' x2='21' y2='9'></line><line x1='9' y1='21' x2='9' y2='9'></line></svg></span> Overview
       </button>
       <button [class.active]="activeTab==='patients'" (click)="setTab('patients')">
-        <span>🧑‍⚕️</span> My Patients
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></span> My Patients
       </button>
       <button [class.active]="activeTab==='myTreatments'" (click)="setTab('myTreatments')">
-        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg></span> My Treatments
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='m18 2 4 4'></path><path d='m17 7 3-3'></path><path d='M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5'></path><path d='m9 11 4 4'></path><path d='m5 19-3 3'></path><path d='m14 4 6 6'></path></svg></span> My Treatments
       </button>
     </nav>
   </aside>
@@ -19,39 +19,39 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Nurse' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Nurse' }}</h2>
         <p>Manage patient care and execute treatments</p>
       </div>
       <div class="stats-grid">
-        <div class="stat-card green">
-          <div class="stat-icon">🧑‍⚕️</div>
+        <div class="stat-card green card-interactive" (click)="setTab('patients')">
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ patients.length }}</span>
             <span class="stat-label">Total Patients</span>
           </div>
         </div>
-        <div class="stat-card blue">
+        <div class="stat-card blue card-interactive" (click)="setTab('patients')">
           <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ admittedCount }}</span>
             <span class="stat-label">Admitted</span>
           </div>
         </div>
-        <div class="stat-card red">
-          <div class="stat-icon">⚠️</div>
+        <div class="stat-card red card-interactive" (click)="setTab('patients')">
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg></div>
           <div class="stat-info">
-            <span class="stat-value">{{ criticalCount }}</span>
-            <span class="stat-label">Critical</span>
+            <span class="stat-value">{{ underObservationCount }}</span>
+            <span class="stat-label">Under Observation</span>
           </div>
         </div>
-        <div class="stat-card purple">
+        <div class="stat-card purple card-interactive" (click)="setTab('myTreatments')">
           <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><path d='M12 2v20M2 12h20'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ myTreatments.length }}</span>
             <span class="stat-label">My Treatments</span>
           </div>
         </div>
-        <div class="stat-card yellow">
+        <div class="stat-card yellow card-interactive" (click)="setTab('notifications')">
           <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'></path><path d='M13.73 21a2 2 0 0 1-3.46 0'></path></svg></div>
           <div class="stat-info">
             <span class="stat-value">{{ unreadCount }}</span>
@@ -59,6 +59,93 @@
           </div>
         </div>
       </div>
+
+      <div class="overview-kpi-grid">
+        <div class="mini-kpi-card info">
+          <span class="mini-kpi-label">Active Patients</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.activePatients }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Under Observation</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.observationPatients }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Ongoing Tasks</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.ongoingTreatments }}</strong>
+        </div>
+        <div class="mini-kpi-card success">
+          <span class="mini-kpi-label">Completed (7d)</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.completed7d }}</strong>
+        </div>
+      </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>Treatment Tasks (Past 7 Days)</h3>
+            <span class="panel-subtext">Daily treatment activity</span>
+          </div>
+
+          <div class="treatment-chart">
+            @for (point of treatmentTrend7d; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
+                <span class="chart-value">{{ point.count }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" [style.height.%]="getTreatmentTrendBarHeight(point.count)"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="overview-panel queue-panel">
+          <div class="panel-header">
+            <h3>Pending Task Queue</h3>
+            <span class="panel-subtext">PENDING / ONGOING treatments</span>
+          </div>
+
+          <div class="task-queue">
+            @if (pendingTaskQueue.length === 0) {
+              <div class="empty-activity">No pending treatment tasks.</div>
+            } @else {
+              @for (task of pendingTaskQueue; track task.treatmentId) {
+                <div class="queue-item">
+                  <div class="queue-main">
+                    <strong>#{{ task.treatmentId }}</strong>
+                    <span>Patient {{ task.patientId }} • {{ task.description }}</span>
+                  </div>
+                  <div class="queue-meta">
+                    <span class="status-badge" [class]="task.status.toLowerCase()">{{ task.status }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="overview-panel activity-standalone">
+        <div class="panel-header">
+          <h3>Recent Nursing Activity</h3>
+          <span class="panel-subtext">Tasks, patient status and alerts</span>
+        </div>
+
+        <div class="activity-feed">
+          @if (recentNursingActivity.length === 0) {
+            <div class="empty-activity">No recent activity.</div>
+          } @else {
+            @for (item of recentNursingActivity; track $index) {
+              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
+                <div class="activity-content">
+                  <p class="activity-message">{{ item.message }}</p>
+                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
     }
 
     @if (activeTab === 'patients') {
@@ -180,7 +267,7 @@
                   <label>Description / Diagnosis</label>
                   <textarea formControlName="description" rows="3" placeholder="Describe the treatment..."></textarea>
                   @if (treatmentForm.get('description')?.touched && treatmentForm.get('description')?.errors) {
-                    <small class="field-error">Description is required</small>
+                    <small class="error-text">Description is required</small>
                   }
                 </div>
                 <div class="form-row">
@@ -188,14 +275,14 @@
                     <label>Medication Name</label>
                     <input type="text" formControlName="medicationName" placeholder="e.g. Paracetamol" />
                     @if (treatmentForm.get('medicationName')?.touched && treatmentForm.get('medicationName')?.errors) {
-                      <small class="field-error">Medication name is required</small>
+                      <small class="error-text">Medication name is required</small>
                     }
                   </div>
                   <div class="form-group">
                     <label>Dosage</label>
                     <input type="text" formControlName="dosage" placeholder="e.g. 500mg twice daily" />
                     @if (treatmentForm.get('dosage')?.touched && treatmentForm.get('dosage')?.errors) {
-                      <small class="field-error">Dosage is required</small>
+                      <small class="error-text">Dosage is required</small>
                     }
                   </div>
                 </div>
@@ -221,8 +308,8 @@
                 <p class="treatment-date"><strong>Date:</strong> {{ t.startDate || t.date | date }}</p>
                 @if (t.status === 'ONGOING') {
                   <div class="treatment-actions">
-                    <button class="btn-sm btn-success" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Complete</button>
-                    <button class="btn-sm btn-danger" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">✕ Cancel</button>
+                    <button class="btn-sm btn-success" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : 'Complete' }}</button>
+                    <button class="btn-sm btn-danger" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">{{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : '✕ Cancel' }}</button>
                   </div>
                 }
               </div>
@@ -240,7 +327,7 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Patient ID</th><th>Description</th><th>Date</th><th>Status</th></tr>
+            <tr><th>ID</th><th>Patient ID</th><th>Description</th><th>Date</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
             @for (t of myTreatments; track t.treatmentId) {
@@ -250,9 +337,17 @@
                 <td>{{ t.description }}</td>
                 <td>{{ t.date | date }}</td>
                 <td><span class="status-badge" [class]="t.status.toLowerCase()">{{ t.status }}</span></td>
+                <td>
+                  @if (t.status === 'ONGOING') {
+                    <div style="display:flex;gap:0.5rem">
+                      <button class="btn-sm btn-success" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : 'Complete' }}</button>
+                      <button class="btn-sm btn-danger" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">{{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : '✕ Cancel' }}</button>
+                    </div>
+                  }
+                </td>
               </tr>
             }
-            @empty { <tr><td colspan="5" class="empty">No treatments recorded</td></tr> }
+            @empty { <tr><td colspan="6" class="empty">No treatments recorded</td></tr> }
           </tbody>
         </table>
       </div>

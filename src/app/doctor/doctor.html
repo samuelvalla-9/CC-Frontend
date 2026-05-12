@@ -11,12 +11,9 @@
       </button>
       <button [class.active]="activeTab==='myPatients'" (click)="setTab('myPatients')">
         <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></span> My Patients
-        @if (myPatients.length > 0) {
-          <span class="badge">{{ myPatients.length }}</span>
-        }
       </button>
       <button [class.active]="activeTab==='myTreatments'" (click)="setTab('myTreatments')">
-        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2 0 1 2-2h2'></path><rect x='8' y='2' width='8' height='4' rx='1' ry='1'></rect></svg></span> My Treatments
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='m18 2 4 4'></path><path d='m17 7 3-3'></path><path d='M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5'></path><path d='m9 11 4 4'></path><path d='m5 19-3 3'></path><path d='m14 4 6 6'></path></svg></span> My Treatments
       </button>
     </nav>
   </aside>
@@ -25,8 +22,14 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Doctor' }} 👋</h2>
-        <p>Manage patients and treatment records @if (staffFacilityName) { — <strong>{{ staffFacilityName }}</strong> }</p>
+        <h2>Hello, {{ auth.getUser()?.name || 'Doctor' }}</h2>
+        <p>Manage patients and treatment records</p>
+        @if (staffFacilityName) {
+          <div class="facility-highlight" title="Your assigned hospital">
+            <span class="facility-label">Hospital</span>
+            <strong class="facility-name">{{ staffFacilityName }}</strong>
+          </div>
+        }
       </div>
       <div class="stats-grid">
         <div class="stat-card green card-interactive" (click)="setTab('patients')">
@@ -36,11 +39,11 @@
             <span class="stat-label">Total Patients</span>
           </div>
         </div>
-        <div class="stat-card blue card-interactive" (click)="setTab('patients')">
-          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg></div>
+        <div class="stat-card blue card-interactive" (click)="setTab('myPatients')">
+          <div class="stat-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg></div>
           <div class="stat-info">
-            <span class="stat-value">{{ admittedCount }}</span>
-            <span class="stat-label">Admitted</span>
+            <span class="stat-value">{{ overviewKpis.activePatients }}</span>
+            <span class="stat-label">Active Patients</span>
           </div>
         </div>
         <div class="stat-card purple card-interactive" (click)="setTab('myTreatments')">
@@ -58,6 +61,75 @@
           </div>
         </div>
       </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>Treatment Activity (Past 7 Days)</h3>
+            <span class="panel-subtext">Daily treatment updates</span>
+          </div>
+
+          <div class="treatment-chart">
+            @for (point of treatmentTrend7d; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
+                <span class="chart-value">{{ point.count }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" [style.height.%]="getTreatmentTrendBarHeight(point.count)"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="overview-panel queue-panel">
+          <div class="panel-header">
+            <h3>High-Priority Patients</h3>
+            <span class="panel-subtext">Under observation</span>
+          </div>
+
+          <div class="priority-queue">
+            @if (highPriorityPatients.length === 0) {
+              <div class="empty-activity">No high-priority patients right now.</div>
+            } @else {
+              @for (p of highPriorityPatients; track p.patientId) {
+                <div class="queue-item">
+                  <div class="queue-main">
+                    <strong>#{{ p.patientId }}</strong>
+                    <span>Citizen {{ p.citizenId }} @if (p.ward) { • Ward {{ p.ward }} }</span>
+                  </div>
+                  <div class="queue-meta">
+                    <span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span>
+                    <button class="btn-sm btn-info" (click)="togglePatientDetails(p)">Open</button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="overview-panel activity-standalone">
+        <div class="panel-header">
+          <h3>Recent Clinical Activity</h3>
+          <span class="panel-subtext">Treatments, assignments and alerts</span>
+        </div>
+
+        <div class="activity-feed">
+          @if (recentClinicalActivity.length === 0) {
+            <div class="empty-activity">No recent clinical activity.</div>
+          } @else {
+            @for (item of recentClinicalActivity; track $index) {
+              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
+                <div class="activity-content">
+                  <p class="activity-message">{{ item.message }}</p>
+                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
     }
 
     @if (activeTab === 'patients') {
@@ -224,8 +296,8 @@
                 <p class="treatment-date"><strong>Date:</strong> {{ t.startDate || t.date | date }}</p>
                 @if (t.status === 'ONGOING') {
                   <div class="treatment-actions">
-                    <button class="btn-sm btn-success" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Complete</button>
-                    <button class="btn-sm btn-danger" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">✕ Cancel</button>
+                    <button class="btn-sm btn-success" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : 'Complete' }}</button>
+                    <button class="btn-sm btn-danger" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">{{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : '✕ Cancel' }}</button>
                   </div>
                 }
               </div>
@@ -242,16 +314,16 @@
       <div class="page-header"><h2>My Patients</h2></div>
 
       <div class="filter-section">
-        <label>Filter by Status:</label>
+        <label>Filter Active Patients by Status:</label>
         <select [(ngModel)]="myPatientsStatusFilter" (change)="onMyPatientsFilterChange()" class="filter-select">
-          <option value="ALL">All Patients</option>
+          <option value="ALL">All Active Patients</option>
           <option value="UNDER_OBSERVATION">Under Observation</option>
           <option value="STABLE">Stable</option>
-          <option value="DISCHARGED">Discharged</option>
         </select>
       </div>
 
       <div class="table-card">
+        <div class="section-header"><h3>Active Patients ({{ filteredMyPatients.length }})</h3></div>
         <table>
           <thead>
             <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Status</th><th>Action</th></tr>
@@ -270,7 +342,32 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No patients assigned to you yet</td></tr> }
+            @empty { <tr><td colspan="7" class="empty">No active patients assigned to you</td></tr> }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-card">
+        <div class="section-header"><h3>Discharged Patients ({{ dischargedMyPatients.length }})</h3></div>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Citizen ID</th><th>Facility ID</th><th>Ward</th><th>Admitted</th><th>Discharged</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            @for (p of dischargedMyPatients; track p.patientId) {
+              <tr>
+                <td>#{{ p.patientId }}</td>
+                <td>{{ p.citizenId }}</td>
+                <td>{{ p.facilityId || 'N/A' }}</td>
+                <td>{{ p.ward || 'N/A' }}</td>
+                <td>{{ p.admissionDate | date }}</td>
+                <td>{{ p.dischargeDate ? (p.dischargeDate | date) : 'N/A' }}</td>
+                <td>
+                  <button class="btn-sm btn-info" style="min-width: 100px;" (click)="togglePatientDetails(p)">View Details</button>
+                </td>
+              </tr>
+            }
+            @empty { <tr><td colspan="7" class="empty">No discharged patients</td></tr> }
           </tbody>
         </table>
       </div>
@@ -294,8 +391,8 @@
                 <td>
                   @if (t.status === 'ONGOING') {
                     <div style="display:flex;gap:0.5rem">
-                      <button class="btn-sm btn-success" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Complete</button>
-                      <button class="btn-sm btn-danger" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">✕ Cancel</button>
+                      <button class="btn-sm btn-success" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'COMPLETED')"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : 'Complete' }}</button>
+                      <button class="btn-sm btn-danger" [disabled]="isTreatmentUpdateInFlight(t.treatmentId)" (click)="updateTreatmentStatus(t.treatmentId, 'CANCELLED')">{{ isTreatmentUpdateInFlight(t.treatmentId) ? 'Updating...' : '✕ Cancel' }}</button>
                     </div>
                   }
                 </td>

@@ -19,6 +19,14 @@ export interface CreateStaffRequest {
   facilityId: number;
 }
 
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly API = 'http://localhost:9090/admin';
@@ -98,6 +106,16 @@ export class AdminService {
       }));
   }
 
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<ApiResponse<null>>(`${this.API}/users/${id}`, { headers: this.headers })
+      .pipe(map(() => void 0));
+  }
+
+  deleteStaffRecord(id: number): Observable<void> {
+    return this.http.delete<ApiResponse<null>>(`http://localhost:9090/staff/${id}`, { headers: this.headers })
+      .pipe(map(() => void 0));
+  }
+
   // Staff Management (AuthService only - no facility record)
   createStaff(data: CreateStaffRequest): Observable<User> {
     return this.http.post<ApiResponse<User>>(`${this.API}/staff`, data, { headers: this.headers })
@@ -125,12 +143,12 @@ export class AdminService {
       .pipe(map(res => res.data));
   }
 
-  createComplianceOfficer(data: CreateStaffRequest): Observable<User> {
+  createComplianceOfficer(data: CreateUserRequest): Observable<User> {
     return this.http.post<ApiResponse<User>>(`${this.API}/compliance-officers`, data, { headers: this.headers })
       .pipe(map(res => res.data));
   }
 
-  createHealthOfficer(data: CreateStaffRequest): Observable<User> {
+  createHealthOfficer(data: CreateUserRequest): Observable<User> {
     return this.http.post<ApiResponse<User>>(`${this.API}/health-officers`, data, { headers: this.headers })
       .pipe(map(res => res.data));
   }

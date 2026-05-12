@@ -8,7 +8,13 @@ import { AuthService } from '../services/auth.service';
     <footer class="app-footer">
       <div class="footer-content">
         <div class="footer-brand">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <svg viewBox="0 0 64 64" width="16" height="16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="32" cy="32" r="25"></circle>
+            <path d="M43 19a18 18 0 1 0 0 26"></path>
+            <path d="M42 23h8"></path>
+            <path d="M46 19v8"></path>
+            <path d="M18 33h11l5-8 7 16 4-8h7"></path>
+          </svg>
           <span>CityCare Enterprise Platform</span>
         </div>
         <div class="footer-info">

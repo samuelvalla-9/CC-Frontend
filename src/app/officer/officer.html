@@ -25,7 +25,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Health Officer' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Health Officer' }}</h2>
         <p>Program monitoring, compliance tracking and analytics</p>
       </div>
       <div class="stats-grid">
@@ -79,6 +79,87 @@
           </div>
         </div>
       </div>
+
+      <div class="overview-kpi-grid">
+        <div class="mini-kpi-card success">
+          <span class="mini-kpi-label">Active Facilities</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.activeFacilities }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Active Emergencies</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.activeEmergencies }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Under Observation</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.observationPatients }}</strong>
+        </div>
+        <div class="mini-kpi-card info">
+          <span class="mini-kpi-label">Compliance Attention</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.complianceAttention }}</strong>
+        </div>
+      </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>City Admissions Trend (Past 7 Days)</h3>
+            <span class="panel-subtext">Daily patient admissions</span>
+          </div>
+
+          <div class="admissions-chart">
+            @for (point of admissionsTrend7d; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
+                <span class="chart-value">{{ point.count }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" [style.height.%]="getAdmissionsTrendBarHeight(point.count)"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="overview-panel queue-panel">
+          <div class="panel-header">
+            <h3>Resource Alerts</h3>
+            <span class="panel-subtext">Operational priorities</span>
+          </div>
+
+          <div class="resource-queue">
+            @for (item of resourceAlerts; track $index) {
+              <button [class]="'queue-item ' + item.severity" (click)="setTab(item.targetTab)">
+                <div class="queue-main">
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ item.subtitle }}</span>
+                </div>
+                <span class="queue-open">Open →</span>
+              </button>
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="overview-panel activity-standalone">
+        <div class="panel-header">
+          <h3>Recent City Activity</h3>
+          <span class="panel-subtext">Facilities, emergencies, patients, compliance</span>
+        </div>
+
+        <div class="activity-feed">
+          @if (recentCityActivity.length === 0) {
+            <div class="empty-activity">No recent activity.</div>
+          } @else {
+            @for (item of recentCityActivity; track $index) {
+              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
+                <div class="activity-content">
+                  <p class="activity-message">{{ item.message }}</p>
+                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
     }
 
     @if (activeTab === 'facilities') {
@@ -127,15 +208,15 @@
       <div class="page-header"><h2>Patient Records</h2><p>{{ patientRecoveryRate }}% recovery rate</p></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Condition</th><th>Status</th><th>Admitted</th></tr></thead>
+          <thead><tr><th>ID</th><th>Citizen ID</th><th>Ward</th><th>Status</th><th>Admitted</th></tr></thead>
           <tbody>
             @for (p of patients; track p.patientId || $index) {
               <tr>
                 <td>#{{ p.patientId }}</td>
-                <td>{{ p.name || p.citizenName || 'Patient #' + p.patientId }}</td>
-                <td>{{ p.condition || p.diagnosis || '-' }}</td>
+                <td>{{ p.citizenId }}</td>
+                <td>{{ p.ward || 'N/A' }}</td>
                 <td><span class="status-badge" [ngClass]="(p.status || '').toLowerCase()">{{ p.status }}</span></td>
-                <td>{{ p.admittedDate || p.createdDate | date:'short' }}</td>
+                <td>{{ p.admissionDate | date:'short' }}</td>
               </tr>
             }
             @empty { <tr><td colspan="5" class="empty">No patient records</td></tr> }

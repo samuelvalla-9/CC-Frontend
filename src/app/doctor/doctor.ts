@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -10,6 +10,7 @@ import { Patient, Treatment, PatientStatus } from '../../models/patient.model';
 import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-doctor',
@@ -39,12 +40,23 @@ export class DoctorDashboard implements OnInit {
   private staffFacilityId: number | null = null;
   staffFacilityName: string = '';
 
+  // Overview analytics
+  treatmentTrend7d: Array<{ dateKey: string; label: string; count: number }> = [];
+  highPriorityPatients: Patient[] = [];
+  recentClinicalActivity: Array<{ message: string; timestamp: Date; severity: 'info' | 'warning' | 'success' }> = [];
+  overviewKpis = {
+    activePatients: 0,
+    observationNow: 0,
+    ongoingTreatments: 0,
+    completed7d: 0,
+  };
+
   get admittedCount() { return this.patients.filter(p => p.status === 'ADMITTED').length; }
-  get criticalCount() { return this.patients.filter(p => p.status === 'CRITICAL').length; }
 
   treatmentForm: TreatmentRequest = { patientId: 0, description: '', medicationName: '', dosage: '' };
   errorMsg = '';
   isSubmittingTreatment = false;
+  private updatingTreatmentIds = new Set<number>();
 
   private get headers() {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
@@ -57,6 +69,7 @@ export class DoctorDashboard implements OnInit {
     public auth: AuthService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
+    private zone: NgZone,
     private route: ActivatedRoute,
     private router: Router,
     private toastService: ToastService
@@ -76,6 +89,9 @@ export class DoctorDashboard implements OnInit {
   }
 
   setTab(tab: string) {
+    if (this.activeTab === tab) return;
+    this.activeTab = tab;
+    this.cdr.detectChanges();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: tab },
@@ -117,9 +133,14 @@ export class DoctorDashboard implements OnInit {
           this.myPatients = d;
           this.assignedPatientIds = new Set(d.map(p => p.patientId));
           this.applyMyPatientsFilter();
+          this.refreshOverviewInsights();
           this.cdr.detectChanges();
         },
-        error: () => { this.myPatients = []; }
+        error: () => {
+          this.myPatients = [];
+          this.applyMyPatientsFilter();
+          this.refreshOverviewInsights();
+        }
       });
     };
 
@@ -154,6 +175,7 @@ export class DoctorDashboard implements OnInit {
     this.treatmentService.getTreatmentsByDoctorId(doctorId).subscribe({
       next: d => {
         this.myTreatments = d;
+        this.refreshOverviewInsights();
         this.cdr.detectChanges();
       },
       error: (err) => this.toastService.showError('Failed to load treatments')
@@ -165,18 +187,172 @@ export class DoctorDashboard implements OnInit {
       next: d => {
         this.notifications = d;
         this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
+        this.refreshOverviewInsights();
         this.cdr.detectChanges();
       },
       error: () => {}
     });
   }
 
-  applyMyPatientsFilter() {
-    if (this.myPatientsStatusFilter === 'ALL') {
-      this.filteredMyPatients = [...this.myPatients];
-    } else {
-      this.filteredMyPatients = this.myPatients.filter(p => p.status === this.myPatientsStatusFilter);
+  private refreshOverviewInsights() {
+    this.buildOverviewKpis();
+    this.buildTreatmentTrend7d();
+    this.buildHighPriorityQueue();
+    this.buildRecentClinicalActivity();
+  }
+
+  private buildOverviewKpis() {
+    const rangeStart = new Date();
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeStart.setDate(rangeStart.getDate() - 6);
+
+    this.overviewKpis = {
+      activePatients: this.myPatients.filter(p => p.status !== PatientStatus.DISCHARGED).length,
+      observationNow: this.myPatients.filter(p => p.status === PatientStatus.UNDER_OBSERVATION).length,
+      ongoingTreatments: this.myTreatments.filter(t => t.status === 'ONGOING' || t.status === 'PENDING').length,
+      completed7d: this.myTreatments.filter(t => {
+        if (t.status !== 'COMPLETED') return false;
+        const dt = this.tryParseDate((t as any).endDate ?? (t as any).date ?? (t as any).startDate);
+        return !!dt && dt >= rangeStart;
+      }).length,
+    };
+  }
+
+  private buildTreatmentTrend7d() {
+    const now = new Date();
+    const buckets: Array<{ dateKey: string; label: string; count: number }> = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      buckets.push({
+        dateKey: this.toDateKey(d),
+        label: d.toLocaleDateString(undefined, { weekday: 'short' }),
+        count: 0,
+      });
     }
+
+    const map = new Map(buckets.map(b => [b.dateKey, b]));
+    this.myTreatments.forEach(t => {
+      const dt = this.tryParseDate((t as any).date ?? (t as any).startDate ?? (t as any).endDate);
+      if (!dt) return;
+      const bucket = map.get(this.toDateKey(dt));
+      if (bucket) bucket.count += 1;
+    });
+
+    this.treatmentTrend7d = buckets;
+  }
+
+  private buildHighPriorityQueue() {
+    const highRiskStatuses: Array<PatientStatus> = [PatientStatus.UNDER_OBSERVATION];
+
+    this.highPriorityPatients = [...this.myPatients]
+      .filter(p => highRiskStatuses.includes(p.status))
+      .sort((a, b) => {
+        const aTime = this.tryParseDate((a as any).admissionDate)?.getTime() ?? 0;
+        const bTime = this.tryParseDate((b as any).admissionDate)?.getTime() ?? 0;
+        return bTime - aTime;
+      })
+      .slice(0, 8);
+  }
+
+  private buildRecentClinicalActivity() {
+    const events: Array<{ message: string; timestamp: Date; severity: 'info' | 'warning' | 'success' }> = [];
+
+    this.myTreatments.forEach(t => {
+      const ts = this.tryParseDate((t as any).date ?? (t as any).startDate ?? (t as any).endDate);
+      if (!ts) return;
+      const status = String((t as any).status ?? '').toUpperCase();
+      events.push({
+        message: `Treatment #${t.treatmentId} for patient #${t.patientId} marked ${status || 'UPDATED'}`,
+        timestamp: ts,
+        severity: status === 'COMPLETED' ? 'success' : (status === 'CANCELLED' ? 'warning' : 'info'),
+      });
+    });
+
+    this.myPatients.forEach(p => {
+      const admitted = this.tryParseDate((p as any).admissionDate);
+      if (admitted) {
+        events.push({
+          message: `Patient #${p.patientId} assigned${p.ward ? ` (${p.ward})` : ''}`,
+          timestamp: admitted,
+          severity: p.status === PatientStatus.UNDER_OBSERVATION ? 'warning' : 'info',
+        });
+      }
+
+      const discharged = this.tryParseDate((p as any).dischargeDate);
+      if (discharged) {
+        events.push({
+          message: `Patient #${p.patientId} discharged`,
+          timestamp: discharged,
+          severity: 'success',
+        });
+      }
+    });
+
+    this.notifications.forEach(n => {
+      const ts = this.tryParseDate((n as any).createdDate);
+      if (!ts) return;
+      events.push({
+        message: n.message,
+        timestamp: ts,
+        severity: n.status === 'UNREAD' ? 'warning' : 'info',
+      });
+    });
+
+    this.recentClinicalActivity = events
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 14);
+  }
+
+  getTreatmentTrendBarHeight(count: number): number {
+    const max = Math.max(...this.treatmentTrend7d.map(x => x.count), 1);
+    return Math.max((count / max) * 100, count > 0 ? 12 : 4);
+  }
+
+  formatActivityTime(date: Date): string {
+    const diffMs = Date.now() - date.getTime();
+    const mins = Math.floor(diffMs / (1000 * 60));
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  getActivitySeverityClass(severity: 'info' | 'warning' | 'success'): string {
+    if (severity === 'warning') return 'warning';
+    if (severity === 'success') return 'success';
+    return 'info';
+  }
+
+  private tryParseDate(value: any): Date | null {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  applyMyPatientsFilter() {
+    const activePatients = this.myPatients.filter(p => p.status !== PatientStatus.DISCHARGED);
+
+    if (this.myPatientsStatusFilter === 'ALL') {
+      this.filteredMyPatients = [...activePatients];
+    } else {
+      this.filteredMyPatients = activePatients.filter(p => p.status === this.myPatientsStatusFilter);
+    }
+  }
+
+  get dischargedMyPatients(): Patient[] {
+    return this.myPatients.filter(p => p.status === PatientStatus.DISCHARGED);
   }
 
   onMyPatientsFilterChange() {
@@ -203,21 +379,28 @@ export class DoctorDashboard implements OnInit {
     this.showTreatmentForm = null;
     this.citizenDetails = null;
     this.emergencyDetails = null;
+    this.setTab('patientDetail');
+
+    // Load detail payloads after the detail view is active so bindings update
+    // as soon as each response arrives.
     this.loadPatientTreatments(patient.patientId);
     this.loadCitizenDetails(patient.citizenId);
     this.loadEmergencyDetails(patient.emergencyId);
-    this.setTab('patientDetail');
   }
 
   loadPatientTreatments(patientId: number) {
     this.treatmentService.getTreatmentsByPatient(patientId).subscribe({
       next: d => {
-        this.patientTreatments = d ?? [];
-        this.cdr.detectChanges();
+        this.zone.run(() => {
+          this.patientTreatments = d ?? [];
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.patientTreatments = [];
-        this.cdr.detectChanges();
+        this.zone.run(() => {
+          this.patientTreatments = [];
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -226,8 +409,10 @@ export class DoctorDashboard implements OnInit {
     this.http.get<any>(`http://localhost:9090/api/citizens/${citizenId}`, { headers: this.headers })
       .subscribe({
         next: d => {
-          this.citizenDetails = d?.data ?? d;
-          this.cdr.detectChanges();
+          this.zone.run(() => {
+            this.citizenDetails = d?.data ?? d;
+            this.cdr.detectChanges();
+          });
         },
         error: () => this.toastService.showError('Failed to load citizen details')
       });
@@ -237,8 +422,10 @@ export class DoctorDashboard implements OnInit {
     this.http.get<any>(`http://localhost:9090/emergencies/${emergencyId}`, { headers: this.headers })
       .subscribe({
         next: d => {
-          this.emergencyDetails = d?.data ?? d;
-          this.cdr.detectChanges();
+          this.zone.run(() => {
+            this.emergencyDetails = d?.data ?? d;
+            this.cdr.detectChanges();
+          });
         },
         error: () => this.toastService.showError('Failed to load emergency details')
       });
@@ -267,28 +454,32 @@ export class DoctorDashboard implements OnInit {
     }
 
     this.isSubmittingTreatment = true;
-    this.treatmentService.addTreatment(this.treatmentForm).subscribe({
-      next: () => {
-        this.isSubmittingTreatment = false;
-        this.toastService.showSuccess('Treatment added successfully');
-        this.closeTreatmentForm();
-        this.loadMyTreatments();
-        if (this.selectedPatient) {
-          this.loadPatientTreatments(this.selectedPatient.patientId);
-          // Auto-update patient status to UNDER_OBSERVATION
-          if (this.selectedPatient.status === 'ADMITTED') {
-            this.updatePatientStatus(this.selectedPatient.patientId, 'UNDER_OBSERVATION' as PatientStatus);
+    this.treatmentService.addTreatment(this.treatmentForm)
+      .pipe(
+        finalize(() => {
+          this.isSubmittingTreatment = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.showSuccess('Treatment added successfully');
+          this.closeTreatmentForm();
+          this.loadMyTreatments();
+          if (this.selectedPatient) {
+            this.loadPatientTreatments(this.selectedPatient.patientId);
+            // Auto-update patient status to UNDER_OBSERVATION
+            if (this.selectedPatient.status === 'ADMITTED') {
+              this.updatePatientStatus(this.selectedPatient.patientId, 'UNDER_OBSERVATION' as PatientStatus);
+            }
           }
+          this.loadPatients();
+          this.errorMsg = '';
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.toastService.showError(err.error?.message || 'Failed to add treatment');
         }
-        this.loadPatients();
-        this.errorMsg = '';
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isSubmittingTreatment = false;
-        this.toastService.showError(err.error?.message || 'Failed to add treatment');
-      }
-    });
+      });
   }
 
   updatePatientStatus(patientId: number, newStatus: PatientStatus) {
@@ -331,7 +522,16 @@ export class DoctorDashboard implements OnInit {
   }
 
   updateTreatmentStatus(treatmentId: number, status: string) {
+    if (this.updatingTreatmentIds.has(treatmentId)) return;
+
+    this.updatingTreatmentIds.add(treatmentId);
     this.http.patch<any>(`http://localhost:9090/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
+      .pipe(
+        finalize(() => {
+          this.updatingTreatmentIds.delete(treatmentId);
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           this.toastService.showSuccess('Treatment status updated successfully');
@@ -345,6 +545,10 @@ export class DoctorDashboard implements OnInit {
           this.cdr.detectChanges();
         }
       });
+  }
+
+  isTreatmentUpdateInFlight(treatmentId: number): boolean {
+    return this.updatingTreatmentIds.has(treatmentId);
   }
 
   loadAssignedDoctor(patientId: number) {

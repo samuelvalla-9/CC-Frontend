@@ -27,7 +27,7 @@
   <main class="content">
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Citizen' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Citizen' }}</h2>
         <p>Manage your healthcare services and emergencies</p>
       </div>
       <div class="stats-grid">
@@ -69,6 +69,81 @@
           </div>
         </div>
       </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel preparedness-panel">
+          <div class="panel-header">
+            <h3>Emergency Preparedness</h3>
+            <span class="panel-subtext">Emergency reporting is for urgent, genuine incidents only</span>
+          </div>
+
+          <ul class="preparedness-list">
+            <li>
+              <strong>Use only for real emergencies</strong>
+              <span>Submit a report only when there is immediate risk to life, health, or public safety.</span>
+            </li>
+            <li>
+              <strong>Provide accurate incident details</strong>
+              <span>Share exact location, landmarks, and brief facts so responders can act without delay.</span>
+            </li>
+            <li>
+              <strong>Account readiness requirement</strong>
+              <span>
+                @if (emergencyReportingBlocker) {
+                  {{ emergencyReportingBlocker.subtitle }}
+                } @else {
+                  Your account is verified and eligible to report emergencies when necessary.
+                }
+              </span>
+            </li>
+            <li>
+              <strong>Ongoing case status</strong>
+              <span>You currently have {{ activeEmergencyCount }} active emergency case(s). Follow official updates in notifications.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="overview-panel queue-panel">
+          <div class="panel-header">
+            <h3>Action Queue</h3>
+            <span class="panel-subtext">What to do next</span>
+          </div>
+
+          <div class="action-queue">
+            @for (item of personalActionQueue; track $index) {
+              <button [class]="'queue-item ' + item.severity" (click)="setTab(item.targetTab)">
+                <div class="queue-main">
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ item.subtitle }}</span>
+                </div>
+                <span class="queue-open">Open →</span>
+              </button>
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="overview-panel activity-standalone">
+        <div class="panel-header">
+          <h3>Recent Personal Activity</h3>
+          <span class="panel-subtext">Emergencies, documents and alerts</span>
+        </div>
+
+        <div class="activity-feed">
+          @if (recentPersonalActivity.length === 0) {
+            <div class="empty-activity">No recent activity yet.</div>
+          } @else {
+            @for (item of recentPersonalActivity; track $index) {
+              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
+                <div class="activity-content">
+                  <p class="activity-message">{{ item.message }}</p>
+                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
     }
 
     @if (activeTab === 'profile') {
@@ -125,7 +200,7 @@
           @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
           <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
             <div class="form-group">
-              <label>Full Name {{ !profile ? '*' : '' }}</label>
+              <label>Full Name {{ isInitialProfileSetupPending ? '*' : '' }}</label>
               <input type="text" formControlName="name" placeholder="Your name" />
               @if (profileForm.get('name')?.invalid && profileForm.get('name')?.touched) {
                 <small class="error-text">
@@ -136,14 +211,19 @@
               }
             </div>
             <div class="form-group">
-              <label>Date of Birth {{ !profile ? '*' : '' }}</label>
-              <input type="date" formControlName="dateOfBirth" />
+              <label>Date of Birth {{ isInitialProfileSetupPending ? '*' : '' }}</label>
+              <input
+                type="date"
+                formControlName="dateOfBirth"
+                [attr.max]="todayDate"
+                [attr.min]="minDate"
+              />
               @if (profileForm.get('dateOfBirth')?.invalid && profileForm.get('dateOfBirth')?.touched) {
                 <small class="error-text">Date of birth is required</small>
               }
             </div>
             <div class="form-group">
-              <label>Gender {{ !profile ? '*' : '' }}</label>
+              <label>Gender {{ isInitialProfileSetupPending ? '*' : '' }}</label>
               <select formControlName="gender">
                 <option value="">Select Gender</option>
                 <option value="MALE">Male</option>
@@ -155,21 +235,21 @@
               }
             </div>
             <div class="form-group">
-              <label>Contact Info {{ !profile ? '*' : '' }} (10 digits)</label>
+              <label>Contact Info {{ isInitialProfileSetupPending ? '*' : '' }} (10 digits)</label>
               <input type="text" formControlName="contactInfo" placeholder="Phone number (10 digits)" maxlength="10" />
               @if (profileForm.get('contactInfo')?.invalid && profileForm.get('contactInfo')?.touched) {
                 <small class="error-text">Valid 10-digit phone number is required</small>
               }
             </div>
             <div class="form-group">
-              <label>Address {{ !profile ? '*' : '' }}</label>
+              <label>Address {{ isInitialProfileSetupPending ? '*' : '' }}</label>
               <textarea formControlName="address" rows="2" placeholder="Your address"></textarea>
               @if (profileForm.get('address')?.invalid && profileForm.get('address')?.touched) {
                 <small class="error-text">Address is required</small>
               }
             </div>
             <div style="display:flex;gap:1rem">
-              <button type="submit" class="btn-primary" [disabled]="isSavingProfile || (!profile && profileForm.invalid)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'></path><polyline points='17 21 17 13 7 13 7 21'></polyline><polyline points='7 3 7 8 15 8'></polyline></svg> {{ isSavingProfile ? 'Saving...' : 'Save Profile' }}</button>
+              <button type="submit" class="btn-primary" [disabled]="isSavingProfile || (isInitialProfileSetupPending && profileForm.invalid)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'></path><polyline points='17 21 17 13 7 13 7 21'></polyline><polyline points='7 3 7 8 15 8'></polyline></svg> {{ isSavingProfile ? 'Saving...' : 'Save Profile' }}</button>
               <button type="button" class="btn-secondary" (click)="cancelEdit()"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg> Cancel</button>
             </div>
           </form>
@@ -215,7 +295,7 @@
         <div class="form-card" style="margin-top:1.5rem">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
             <h3 style="margin:0">Document Preview</h3>
-            <button class="btn-sm" style="background-color:#EF4444;color:white" (click)="closePreview()">✕ Close</button>
+            <button class="btn-sm btn-danger" (click)="closePreview()">✕ Close</button>
           </div>
           @if (documentIsImage) {
             <img [src]="documentPreviewUrl" style="max-width:100%;max-height:500px;border:1px solid #ddd;border-radius:8px;display:block;margin:0 auto" />
@@ -231,31 +311,47 @@
         <h2>Report Emergency</h2>
         <p>Submit an emergency report for immediate response</p>
       </div>
-      <div class="form-card">
-        @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
-        <form [formGroup]="emergencyForm" (ngSubmit)="reportEmergency()">
-          <div class="form-group">
-            <label>Emergency Type *</label>
-            <select formControlName="type">
-              @for (t of emergencyTypes; track t) {
-                <option [value]="t">{{ t.replace('_', ' ') }}</option>
-              }
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Location *</label>
-            <input type="text" formControlName="location" placeholder="Enter your location" />
-            @if (emergencyForm.get('location')?.invalid && emergencyForm.get('location')?.touched) {
-              <small class="error-text">Location is required (min 3 characters)</small>
+      @if (emergencyReportingBlocker; as blocker) {
+        <div class="form-card report-blocker-card">
+          <div class="report-blocker-icon"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'></path><line x1='12' y1='9' x2='12' y2='13'></line><line x1='12' y1='17' x2='12.01' y2='17'></line></svg></div>
+          <h3>{{ blocker.title }}</h3>
+          <p>{{ blocker.subtitle }}</p>
+          <div class="report-blocker-actions">
+            <button class="btn-primary" (click)="setTab(blocker.targetTab)">
+              {{ blocker.targetTab === 'profile' ? 'Update Profile' : 'Open Documents' }}
+            </button>
+            @if (blocker.targetTab === 'profile') {
+              <button class="btn-secondary" (click)="setTab('documents')">Go to Documents</button>
             }
           </div>
-          <div class="form-group">
-            <label>Description (Optional)</label>
-            <textarea formControlName="description" rows="3" placeholder="Describe the emergency situation..."></textarea>
-          </div>
-          <button type="submit" class="btn-primary" [disabled]="isReportingEmergency || emergencyForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg> {{ isReportingEmergency ? 'Reporting...' : 'Report Emergency' }}</button>
-        </form>
-      </div>
+        </div>
+      } @else {
+        <div class="form-card">
+          @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
+          <form [formGroup]="emergencyForm" (ngSubmit)="reportEmergency()">
+            <div class="form-group">
+              <label>Emergency Type *</label>
+              <select formControlName="type">
+                @for (t of emergencyTypes; track t) {
+                  <option [value]="t">{{ t.replace('_', ' ') }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Location *</label>
+              <input type="text" formControlName="location" placeholder="Enter your location" />
+              @if (emergencyForm.get('location')?.invalid && emergencyForm.get('location')?.touched) {
+                <small class="error-text">Location is required (min 3 characters)</small>
+              }
+            </div>
+            <div class="form-group">
+              <label>Description (Optional)</label>
+              <textarea formControlName="description" rows="3" placeholder="Describe the emergency situation..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary" [disabled]="isReportingEmergency || emergencyForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg> {{ isReportingEmergency ? 'Reporting...' : 'Report Emergency' }}</button>
+          </form>
+        </div>
+      }
     }
 
     @if (activeTab === 'emergencies') {

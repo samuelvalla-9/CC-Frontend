@@ -55,6 +55,11 @@ export class EmergencyService {
       .pipe(map(res => res.data));
   }
 
+  getMyDispatchHistory(): Observable<Emergency[]> {
+    return this.http.get<ApiResponse<Emergency[]>>(`${this.API}/my-dispatch-history`, { headers: this.headers })
+      .pipe(map(res => res.data));
+  }
+
   getEmergencyById(id: number): Observable<Emergency> {
     return this.http.get<ApiResponse<Emergency>>(`${this.API}/${id}`, { headers: this.headers })
       .pipe(map(res => res.data));

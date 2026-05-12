@@ -24,6 +24,9 @@
           <span class="badge">{{ pendingCount$ | async }}</span>
         }
       </button>
+      <button [class.active]="activeTab==='systemHealth'" (click)="setTab('systemHealth')">
+        <span><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='22 12 18 12 15 21 9 3 6 12 2 12'></polyline></svg></span> System Health
+      </button>
     </nav>
   </aside>
 
@@ -31,7 +34,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Admin' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Admin' }}</h2>
         <p>Manage facilities, staff, ambulances and patients</p>
       </div>
       <div class="stats-grid">
@@ -81,6 +84,47 @@
             <span class="stat-label">Pending Verifications</span>
           </div>
         </div>
+      </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>Patient Admissions (Past 7 Days)</h3>
+            <span class="panel-subtext">Daily admission volume</span>
+          </div>
+          <div class="admissions-chart">
+            @for (point of admissionsLast7Days; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
+                <span class="chart-value">{{ point.count }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" [style.height.%]="getAdmissionBarHeight(point.count)"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="overview-panel activity-panel">
+          <div class="panel-header">
+            <h3>Recent Activity</h3>
+            <span class="panel-subtext">Latest platform actions</span>
+          </div>
+          <div class="activity-feed">
+            @if (recentActivity.length === 0) {
+              <div class="empty-activity">No recent actions to show yet.</div>
+            } @else {
+              @for (item of recentActivity; track $index) {
+                <div class="activity-item" [ngClass]="getActivitySeverityClass(item.severity)">
+                  <div class="activity-content">
+                    <p class="activity-message">{{ item.message }}</p>
+                    <span class="activity-meta">{{ item.type }} • {{ formatActivityTime(item.timestamp) }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
       </div>
     }
 
@@ -147,12 +191,34 @@
         </select>
       </div>
 
-      <div class="table-card">
+      <div class="bulk-action-bar" *ngIf="hasSelectedFacilities">
+        <div class="bulk-info">{{ selectedFacilityIds.size }} facility(s) selected</div>
+        <div class="bulk-actions">
+          <button class="btn-sm btn-success" (click)="bulkUpdateSelectedFacilities(FacilityStatus.ACTIVE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.ACTIVE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.ACTIVE)) ? 'Activating...' : 'Activate Selected' }}</button>
+          <button class="btn-sm btn-warning" (click)="bulkUpdateSelectedFacilities(FacilityStatus.INACTIVE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.INACTIVE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.INACTIVE)) ? 'Deactivating...' : 'Deactivate Selected' }}</button>
+          <button class="btn-sm btn-info" (click)="bulkUpdateSelectedFacilities(FacilityStatus.MAINTENANCE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.MAINTENANCE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.MAINTENANCE)) ? 'Updating...' : 'Set Maintenance' }}</button>
+          <button class="btn-sm btn-secondary" (click)="clearFacilitySelection()">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-card enterprise-grid">
         <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Location</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="selection-col"><input type="checkbox" [checked]="areAllVisibleFacilitiesSelected" (change)="toggleSelectAllVisibleFacilities($any($event.target).checked)" /></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('facilityId')">ID <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'facilityId') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('name')">Name <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'name') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('type')">Type <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'type') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('location')">Location <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'location') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('capacity')">Capacity <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'capacity') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortFacilitiesBy('status')">Status <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'status') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             @for (f of filteredFacilities; track f.facilityId) {
               <tr>
+                <td class="selection-col"><input type="checkbox" [checked]="selectedFacilityIds.has(f.facilityId)" (change)="toggleFacilitySelection(f.facilityId, $any($event.target).checked)" /></td>
                 <td>#{{ f.facilityId }}</td>
                 <td>{{ f.name }}</td>
                 <td>{{ f.type }}</td>
@@ -161,19 +227,19 @@
                 <td><span class="status-badge" [class]="f.status.toLowerCase()">{{ f.status }}</span></td>
                 <td>
                   <div class="action-buttons">
-                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="editFacility(f)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg> Edit</button>
+                    <button class="btn-sm btn-info row-action-button" (click)="editFacility(f)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg> Edit</button>
                     @if (f.status === 'ACTIVE') {
-                      <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.INACTIVE)">Deactivate</button>
+                      <button class="btn-sm btn-warning row-action-button" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.INACTIVE)" [disabled]="isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.INACTIVE))">{{ isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.INACTIVE)) ? 'Updating...' : 'Deactivate' }}</button>
                     } @else if (f.status === 'INACTIVE') {
-                      <button class="btn-sm btn-success" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                      <button class="btn-sm btn-success row-action-button" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)" [disabled]="isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.ACTIVE))">{{ isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.ACTIVE)) ? 'Updating...' : 'Activate' }}</button>
                     } @else {
-                      <button class="btn-sm btn-success" style="min-width: 100px;" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)">Activate</button>
+                      <button class="btn-sm btn-success row-action-button" (click)="updateFacilityStatus(f.facilityId, FacilityStatus.ACTIVE)" [disabled]="isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.ACTIVE))">{{ isActionInFlight(facilityStatusActionKey(f.facilityId, FacilityStatus.ACTIVE)) ? 'Updating...' : 'Activate' }}</button>
                     }
                   </div>
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No facilities</td></tr> }
+            @empty { <tr><td colspan="8" class="empty">No facilities</td></tr> }
           </tbody>
         </table>
       </div>
@@ -267,7 +333,7 @@
               <span class="status-badge" [class]="a.status.toLowerCase()">{{ a.status }}</span>
               <div style="display:flex;align-items:center;gap:0.5rem">
                 <span class="vehicle-id">#{{ a.ambulanceId }}</span>
-                <button class="btn-delete-ambulance" (click)="removeAmbulance(a)" title="Remove Ambulance">
+                <button class="btn-delete-ambulance" (click)="removeAmbulance(a)" title="Remove Ambulance" [disabled]="isActionInFlight(ambulanceRemoveActionKey(a.ambulanceId))">
                   <svg viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='3 6 5 6 21 6'></polyline><path d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'></path><line x1='10' y1='11' x2='10' y2='17'></line><line x1='14' y1='11' x2='14' y2='17'></line></svg>
                 </button>
               </div>
@@ -279,15 +345,15 @@
               <h3>{{ a.vehicleNumber }}</h3>
               <p>{{ a.model || 'Standard Fleet' }}</p>
               @if (a.facilityId) {
-                <p class="facility-tag">🏥 {{ getFacilityName(a.facilityId) }}</p>
+                <p class="facility-tag"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M3 21h18'></path><path d='M5 21V7l7-4 7 4v14'></path><path d='M9 21v-6h6v6'></path></svg> {{ getFacilityName(a.facilityId) }}</p>
               }
             </div>
             <div class="card-actions">
               @if (a.status === 'DISPATCHED') {
-                <span class="status-badge dispatched" style="padding:0.5rem 1rem;font-weight:600;text-align:center;width:100%">🚑 In Service — Awaiting Patient Admission</span>
+                <span class="status-badge dispatched" style="padding:0.5rem 1rem;font-weight:600;text-align:center;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:0.4rem"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><rect x='1' y='3' width='15' height='13'></rect><polygon points='16 8 20 8 23 11 23 16 16 16 16 8'></polygon><circle cx='5.5' cy='18.5' r='2.5'></circle><circle cx='18.5' cy='18.5' r='2.5'></circle></svg> In Service — Awaiting Patient Admission</span>
               } @else {
-                <button class="btn-sm btn-info" style="min-width: 100px;" (click)="updateAmbulanceStatus(a.ambulanceId, 'AVAILABLE')" [disabled]="a.status==='AVAILABLE'">Set Available</button>
-                <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="updateAmbulanceStatus(a.ambulanceId, 'MAINTENANCE')" [disabled]="a.status==='MAINTENANCE'">Maintenance</button>
+                <button class="btn-sm btn-info" style="min-width: 100px;" (click)="updateAmbulanceStatus(a.ambulanceId, 'AVAILABLE')" [disabled]="a.status==='AVAILABLE' || isActionInFlight(ambulanceStatusActionKey(a.ambulanceId, 'AVAILABLE'))">{{ isActionInFlight(ambulanceStatusActionKey(a.ambulanceId, 'AVAILABLE')) ? 'Updating...' : 'Set Available' }}</button>
+                <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="updateAmbulanceStatus(a.ambulanceId, 'MAINTENANCE')" [disabled]="a.status==='MAINTENANCE' || isActionInFlight(ambulanceStatusActionKey(a.ambulanceId, 'MAINTENANCE'))">{{ isActionInFlight(ambulanceStatusActionKey(a.ambulanceId, 'MAINTENANCE')) ? 'Updating...' : 'Maintenance' }}</button>
               }
             </div>
           </div>
@@ -322,7 +388,7 @@
               @if (userForm.get('role')?.invalid && userForm.get('role')?.touched) {
                 <small class="error-text">Role is required</small>
               }
-            </div>          @if (userForm.get('role')?.value === 'DOCTOR' || userForm.get('role')?.value === 'NURSE') {
+            </div>          @if (userForm.get('role')?.value === 'DOCTOR' || userForm.get('role')?.value === 'NURSE' || userForm.get('role')?.value === 'DISPATCHER') {
             <div class="form-group">
               <label>Assign to Facility *</label>
               <select formControlName="facilityId">
@@ -378,12 +444,32 @@
           </form>
         </div>
       }
-      <div class="table-card">
+      <div class="bulk-action-bar" *ngIf="hasSelectedUsers">
+        <div class="bulk-info">{{ selectedUserIds.size }} user(s) selected</div>
+        <div class="bulk-actions">
+          <button class="btn-sm btn-success" (click)="bulkActivateSelectedUsers()" [disabled]="isActionInFlight(bulkUserActionKey('activate'))">{{ isActionInFlight(bulkUserActionKey('activate')) ? 'Activating...' : 'Activate Selected' }}</button>
+          <button class="btn-sm btn-warning" (click)="bulkDeactivateSelectedUsers()" [disabled]="isActionInFlight(bulkUserActionKey('deactivate'))">{{ isActionInFlight(bulkUserActionKey('deactivate')) ? 'Deactivating...' : 'Deactivate Selected' }}</button>
+          <button class="btn-sm btn-secondary" (click)="clearUserSelection()">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-card enterprise-grid">
         <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="selection-col"><input type="checkbox" [checked]="areAllUsersSelected" (change)="toggleSelectAllUsers($any($event.target).checked)" /></th>
+              <th><button class="sort-header" (click)="sortUsersBy('userId')">ID <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'userId') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortUsersBy('name')">Name <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'name') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortUsersBy('email')">Email <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'email') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortUsersBy('role')">Role <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'role') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th><button class="sort-header" (click)="sortUsersBy('status')">Status <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'status') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             @for (u of users; track trackByUserId($index, u)) {
               <tr>
+                <td class="selection-col"><input type="checkbox" [checked]="selectedUserIds.has(u.userId || u.id)" (change)="toggleUserSelection(u.userId || u.id, $any($event.target).checked)" /></td>
                 <td>#{{ u.userId }}</td>
                 <td>{{ u.name }}</td>
                 <td>{{ u.email }}</td>
@@ -393,19 +479,19 @@
                 </td>
                 <td>
                   <div class="action-buttons">
-<button class="btn-sm btn-info" style="min-width: 100px;" (click)="viewUserDetails(u)">View</button>
+<button class="btn-sm btn-info row-action-button" (click)="viewUserDetails(u)">View</button>
 @if (u.status === 'ACTIVE') {
 @if ((u.userId || u.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
-<button class="btn-sm btn-warning" style="min-width: 100px;" (click)="deactivateUser(u.userId)">Deactivate</button>
+<button class="btn-sm btn-warning row-action-button" (click)="deactivateUser(u.userId)" [disabled]="isActionInFlight(userActionKey('deactivate', u.userId || u.id))">{{ isActionInFlight(userActionKey('deactivate', u.userId || u.id)) ? 'Updating...' : 'Deactivate' }}</button>
 }
 } @else {
-<button class="btn-sm btn-success" style="min-width: 100px;" (click)="activateUser(u.userId)">Activate</button>
+<button class="btn-sm btn-success row-action-button" (click)="activateUser(u.userId)" [disabled]="isActionInFlight(userActionKey('activate', u.userId || u.id))">{{ isActionInFlight(userActionKey('activate', u.userId || u.id)) ? 'Updating...' : 'Activate' }}</button>
 }
 </div>
 </td>
               </tr>
             }
-            @empty { <tr><td colspan="6" class="empty">No users</td></tr> }
+            @empty { <tr><td colspan="7" class="empty">No users</td></tr> }
           </tbody>
         </table>
       </div>
@@ -451,33 +537,36 @@
           <div class="detail-row"><span>Name</span><strong>{{ selectedUser.name }}</strong></div>
           <div class="detail-row"><span>Email</span><strong>{{ selectedUser.email }}</strong></div>
           <div class="detail-row"><span>Phone</span><strong>{{ selectedUser.phone || 'N/A' }}</strong></div>
-          <p style="color: var(--gray-500); font-style: italic; margin-top:0.5rem">Loading additional details...</p>
+          <p class="loading-hint">Loading additional details...</p>
         }
         <div class="detail-actions">
-@if (errorMsg) { <div class="alert error" style="margin-bottom:0">{{ errorMsg }}</div> }
-@if (selectedUser.status === 'ACTIVE') {
-@if ((selectedUser.userId || selectedUser.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
-<button class="btn-warning btn" style="min-width: 140px;" (click)="deactivateUser(selectedUser.userId)">Deactivate User</button>
-}
-} @else {
-<button class="btn-success btn" style="min-width: 140px;" (click)="activateUser(selectedUser.userId)">Activate User</button>
-}
-</div>
-</div>
+          @if (errorMsg) { <div class="alert error alert-inline">{{ errorMsg }}</div> }
+          @if (selectedUser.status === 'ACTIVE') {
+            @if ((selectedUser.userId || selectedUser.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
+              <button class="btn-warning btn row-action-button" (click)="deactivateUser(selectedUser.userId)" [disabled]="isActionInFlight(userActionKey('deactivate', selectedUser.userId || selectedUser.id))">{{ isActionInFlight(userActionKey('deactivate', selectedUser.userId || selectedUser.id)) ? 'Deactivating...' : 'Deactivate User' }}</button>
+            }
+          } @else {
+            <button class="btn-success btn row-action-button" (click)="activateUser(selectedUser.userId)" [disabled]="isActionInFlight(userActionKey('activate', selectedUser.userId || selectedUser.id))">{{ isActionInFlight(userActionKey('activate', selectedUser.userId || selectedUser.id)) ? 'Activating...' : 'Activate User' }}</button>
+          }
+          @if ((selectedUser.userId || selectedUser.id) !== (auth.getUser()?.userId || auth.getUser()?.id)) {
+            <button class="btn-danger btn row-action-button" (click)="removeUser(selectedUser.userId)" [disabled]="isActionInFlight(userActionKey('remove', selectedUser.userId || selectedUser.id))">{{ isActionInFlight(userActionKey('remove', selectedUser.userId || selectedUser.id)) ? 'Removing...' : 'Remove User' }}</button>
+          }
+        </div>
+      </div>
 
       @if (selectedUser.role === 'CITIZEN') {
-        <div class="table-card" style="margin-top:1.5rem">
-          <h3 class="section-divider" style="margin-top:0">Uploaded Documents</h3>
+        <div class="table-card mt-section">
+          <h3 class="section-divider compact">Uploaded Documents</h3>
           <table>
-            <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th class="action-head">Actions</th></tr></thead>
             <tbody>
               @for (doc of userDocuments; track doc.documentId) {
                 <tr>
                   <td>#{{ doc.documentId }}</td>
                   <td>{{ doc.uploadedDate }}</td>
                   <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
-                  <td>
-                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="previewUserDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+                  <td class="action-cell-right">
+                    <button class="btn-sm btn-info row-action-button" (click)="previewUserDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
                   </td>
                 </tr>
               }
@@ -486,18 +575,18 @@
           </table>
 
           @if (isLoadingUserDoc) {
-            <div class="loading-spinner" style="padding:2rem"><div class="spinner"></div></div>
+            <div class="loading-spinner doc-loading"><div class="spinner"></div></div>
           }
           @if (userDocPreviewUrl) {
-            <div class="document-preview" style="margin-top:1rem; padding:1rem; border:1px solid var(--border-color); border-radius:0.75rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                <h3 style="margin:0; font-size: 1rem;">Document Preview</h3>
+            <div class="document-preview preview-panel">
+              <div class="preview-header">
+                <h3 class="preview-title">Document Preview</h3>
                 <button class="btn-sm btn-secondary" (click)="userDocPreviewUrl = null">Close Preview</button>
               </div>
               @if (userDocIsImage) {
-                <img [src]="userDocPreviewUrl" style="max-width:100%; max-height:500px; border-radius:0.5rem;" />
+                <img [src]="userDocPreviewUrl" class="preview-media" />
               } @else {
-                <iframe [src]="userDocPreviewUrl" style="width:100%; height:500px; border:none; border-radius:0.5rem;"></iframe>
+                <iframe [src]="userDocPreviewUrl" class="preview-media preview-frame"></iframe>
               }
             </div>
           }
@@ -518,7 +607,9 @@
                 <td>{{ c.contactInfo }}</td>
                 <td><span class="status-badge pending">{{ c.pendingCount }} Pending</span></td>
                 <td>
-                  <button class="btn-sm btn-info" style="min-width: 100px;" (click)="viewCitizenDocuments(c)">Review</button>
+                  <div class="action-buttons">
+                    <button class="btn-sm btn-info row-action-button" (click)="viewCitizenDocuments(c)">Review</button>
+                  </div>
                 </td>
               </tr>
             }
@@ -540,24 +631,26 @@
         <div class="detail-row"><span>Contact</span><strong>{{ selectedCitizen.contactInfo }}</strong></div>
         <div class="detail-row"><span>Address</span><strong>{{ selectedCitizen.address || 'N/A' }}</strong></div>
       </div>
-      <div class="table-card" style="margin-top:1.5rem">
+      <div class="table-card mt-section">
         @if (errorMsg) { <div class="alert error">{{ errorMsg }}</div> }
-        <table>
-          <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <table class="verify-docs-table">
+          <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th class="action-col">Actions</th></tr></thead>
           <tbody>
             @for (doc of citizenDocuments; track doc.documentId) {
               <tr>
                 <td>#{{ doc.documentId }}</td>
                 <td>{{ doc.uploadedDate }}</td>
                 <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
-                <td>
-                  <button class="btn-sm btn-info" style="min-width: 100px; margin-right:0.5rem;" (click)="previewDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
-                  @if (doc.verificationStatus === 'PENDING') {
-                    <button class="btn-sm btn-success" style="min-width: 100px; margin-right:0.5rem;" (click)="verifyDocument(doc.documentId, 'VERIFIED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Verify</button>
-                    <button class="btn-sm btn-danger" style="min-width: 100px;" (click)="verifyDocument(doc.documentId, 'REJECTED')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg> Reject</button>
-                  } @else {
-                    <span style="color:#666">{{ doc.verificationStatus }}</span>
-                  }
+                <td class="action-col">
+                  <div class="action-buttons verify-doc-actions">
+                    <button class="btn-sm btn-info row-action-button" (click)="previewDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+                    @if (doc.verificationStatus === 'PENDING') {
+                      <button class="btn-sm btn-success row-action-button" (click)="verifyDocument(doc.documentId, 'VERIFIED')" [disabled]="isActionInFlight(documentVerificationActionKey(doc.documentId, 'VERIFIED'))"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isActionInFlight(documentVerificationActionKey(doc.documentId, 'VERIFIED')) ? 'Verifying...' : 'Verify' }}</button>
+                      <button class="btn-sm btn-danger row-action-button" (click)="verifyDocument(doc.documentId, 'REJECTED')" [disabled]="isActionInFlight(documentVerificationActionKey(doc.documentId, 'REJECTED'))"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg> {{ isActionInFlight(documentVerificationActionKey(doc.documentId, 'REJECTED')) ? 'Rejecting...' : 'Reject' }}</button>
+                    } @else {
+                      <span class="muted-status">{{ doc.verificationStatus }}</span>
+                    }
+                  </div>
                 </td>
               </tr>
             }
@@ -573,12 +666,15 @@
         }
 
         @if (documentPreviewUrl && !isLoadingDocument) {
-          <div class="document-preview">
-            <h3>Document Preview</h3>
+          <div class="document-preview preview-panel">
+            <div class="preview-header">
+              <h3 class="preview-title">Document Preview</h3>
+              <button class="btn-sm btn-secondary" (click)="closePreview()">Close Preview</button>
+            </div>
             @if (documentIsImage) {
-              <img [src]="documentPreviewUrl" style="max-width:100%;max-height:600px;border:1px solid #ddd;border-radius:8px;display:block;margin:0 auto" />
+              <img [src]="documentPreviewUrl" class="preview-media preview-media-lg" />
             } @else {
-              <iframe [src]="documentPreviewUrl" style="width:100%;height:600px;border:1px solid #ddd;border-radius:8px"></iframe>
+              <iframe [src]="documentPreviewUrl" class="preview-media preview-frame preview-media-lg"></iframe>
             }
           </div>
         }
@@ -589,18 +685,18 @@
       <div class="page-header">
         <h2>Patients Management</h2>
         @if (dispatchedEmergencies.length > 0) {
-          <button class="btn-primary" (click)="toggleAdmitPatient()">
+          <button class="btn-primary admit-patient-alert" (click)="toggleAdmitPatient()">
             <svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='12' y1='5' x2='12' y2='19'></line><line x1='5' y1='12' x2='19' y2='12'></line></svg>
             Admit Patient
-            <span class="badge" style="margin-left:8px">{{ dispatchedEmergencies.length }}</span>
+            <span class="badge badge-offset">{{ dispatchedEmergencies.length }}</span>
           </button>
         }
       </div>
 
       @if (showAdmitPatient && dispatchedEmergencies.length > 0) {
         <div class="form-card">
-          <h3 style="margin-top:0">Select Emergency to Admit</h3>
-          <div class="table-card" style="margin-bottom:1.5rem">
+          <h3 class="section-title">Select Emergency to Admit</h3>
+          <div class="table-card mb-section">
             <table>
               <thead><tr><th>Emergency ID</th><th>Type</th><th>Location</th><th>Reported By</th><th>Citizen ID</th><th>Ambulance</th><th>Facility</th><th>Dispatched At</th><th>Action</th></tr></thead>
               <tbody>
@@ -615,8 +711,8 @@
                     <td>{{ e.ambulance?.facilityId ? getFacilityName(e.ambulance.facilityId) : 'Unassigned' }}</td>
                     <td>{{ e.dispatchedAt | date:'short' }}</td>
                     <td>
-                      <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:stretch;">
-                        <button class="btn-sm btn-success" style="min-width: 100px;" (click)="prepareAdmit(e)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M2 4v16'></path><path d='M2 8h18a2 2 0 0 1 2 2v10'></path><path d='M2 17h20'></path><path d='M6 8v9'></path></svg> Admit</button>
+                      <div class="action-buttons">
+                        <button class="btn-sm btn-success row-action-button" (click)="prepareAdmit(e)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M2 4v16'></path><path d='M2 8h18a2 2 0 0 1 2 2v10'></path><path d='M2 17h20'></path><path d='M6 8v9'></path></svg> Admit</button>
                       </div>
                     </td>
                   </tr>
@@ -632,16 +728,16 @@
               <div class="form-row">
                 <div class="form-group">
                   <label>Citizen ID</label>
-                  <input type="number" [(ngModel)]="admitForm.citizenId" name="citizenId" readonly style="background:var(--gray-100)" />
+                  <input type="number" [(ngModel)]="admitForm.citizenId" name="citizenId" readonly class="readonly-input" />
                 </div>
                 <div class="form-group">
                   <label>Emergency ID</label>
-                  <input type="number" [(ngModel)]="admitForm.emergencyId" name="emergencyId" readonly style="background:var(--gray-100)" />
+                  <input type="number" [(ngModel)]="admitForm.emergencyId" name="emergencyId" readonly class="readonly-input" />
                 </div>
               </div>
               <div class="form-group">
                 <label>Assigned Facility</label>
-                <input type="text" [value]="admitForm.facilityId ? getFacilityName(admitForm.facilityId) : 'No facility assigned'" readonly style="background:var(--gray-100);font-weight:600" />
+                <input type="text" [value]="admitForm.facilityId ? getFacilityName(admitForm.facilityId) : 'No facility assigned'" readonly class="readonly-input strong" />
               </div>
               <div class="form-group">
                 <label>Ward</label>
@@ -656,7 +752,7 @@
                 <label>Notes</label>
                 <textarea [(ngModel)]="admitForm.notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
               </div>
-              <div style="display:flex;gap:1rem">
+              <div class="form-actions">
                 <button type="submit" class="btn-primary" [disabled]="isAdmittingPatient"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M2 4v16'></path><path d='M2 8h18a2 2 0 0 1 2 2v10'></path><path d='M2 17h20'></path><path d='M6 8v9'></path></svg> {{ isAdmittingPatient ? 'Admitting...' : 'Admit Patient' }}</button>
                 <button type="button" class="btn-secondary" (click)="cancelAdmit()">Cancel</button>
               </div>
@@ -689,14 +785,14 @@
                 <td><span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span></td>
                 <td>{{ getAssignedDoctorName(p.patientId) || 'Not assigned' }}</td>
                 <td>
-                  <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:stretch;">
-                    <button class="btn-sm btn-info" style="min-width: 100px;" (click)="viewPatientDetails(p)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+                  <div class="action-buttons">
+                    <button class="btn-sm btn-info row-action-button" (click)="viewPatientDetails(p)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
                     @if (p.status === 'DISCHARGED') {
-                      <span style="color: var(--gray-500); text-align: center; font-size: 0.8rem; padding: 4px 0;">Discharged</span>
+                      <span class="muted-status">Discharged</span>
                     } @else if (p.status === 'STABLE') {
-                      <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="dischargePatient(p.patientId)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'></path><polyline points='16 17 21 12 16 7'></polyline><line x1='21' y1='12' x2='9' y2='12'></line></svg> Discharge</button>
+                      <button class="btn-sm btn-warning row-action-button" (click)="dischargePatient(p.patientId)" [disabled]="isActionInFlight(patientDischargeActionKey(p.patientId))"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'></path><polyline points='16 17 21 12 16 7'></polyline><line x1='21' y1='12' x2='9' y2='12'></line></svg> {{ isActionInFlight(patientDischargeActionKey(p.patientId)) ? 'Discharging...' : 'Discharge' }}</button>
                     } @else {
-                      <button class="btn-sm" style="min-width: 100px; opacity: 0.5; cursor: not-allowed;" (click)="dischargePatient(p.patientId)" title="Patient must be STABLE before discharge"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'></path><polyline points='16 17 21 12 16 7'></polyline><line x1='21' y1='12' x2='9' y2='12'></line></svg> Discharge</button>
+                      <button class="btn-sm row-action-button btn-disabled" (click)="dischargePatient(p.patientId)" title="Patient must be STABLE before discharge"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'></path><polyline points='16 17 21 12 16 7'></polyline><line x1='21' y1='12' x2='9' y2='12'></line></svg> Discharge</button>
                     }
                   </div>
                 </td>
@@ -811,11 +907,56 @@
       </div>
     }
 
+    @if (activeTab === 'systemHealth') {
+      <div class="page-header">
+        <h2>System Health Command Center</h2>
+        <div class="page-header-actions">
+          @if (systemHealthLastUpdated) {
+            <small class="health-updated">Updated {{ systemHealthLastUpdated | date:'shortTime' }}</small>
+          }
+          <button class="btn-secondary" (click)="loadSystemHealth()" [disabled]="systemHealthLoading">
+            {{ systemHealthLoading ? 'Refreshing...' : 'Refresh' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="overview-kpi-grid health-kpis">
+        <div class="mini-kpi-card success">
+          <span class="mini-kpi-label">Services UP</span>
+          <strong class="mini-kpi-value">{{ upServicesCount }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Services DOWN</span>
+          <strong class="mini-kpi-value">{{ downServicesCount }}</strong>
+        </div>
+        <div class="mini-kpi-card info">
+          <span class="mini-kpi-label">Avg Response</span>
+          <strong class="mini-kpi-value">{{ averageResponseMs }} ms</strong>
+        </div>
+      </div>
+
+      <div class="health-grid">
+        @for (service of systemServices; track service.key) {
+          <article class="health-card" [class]="service.status === 'UP' ? 'health-card up' : 'health-card down'">
+            <div class="health-card-header">
+              <h3>{{ service.label }}</h3>
+              <span class="status-badge" [class]="service.status.toLowerCase()">{{ service.status }}</span>
+            </div>
+            <p class="health-url">{{ service.endpoint }}</p>
+            <div class="health-metrics">
+              <span>Latency: <strong>{{ service.responseMs ?? 'N/A' }} ms</strong></span>
+              <span>Detail: <strong>{{ service.details || 'Unknown' }}</strong></span>
+            </div>
+          </article>
+        }
+      </div>
+    }
+
     @if (activeTab === 'notifications') {
       <div class="page-header">
         <h2>Notifications</h2>
         @if (unreadCount > 0) {
-          <button class="btn-secondary" (click)="markAllRead()" style="margin-left:auto"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> Mark All Read</button>
+          <button class="btn-secondary push-right" (click)="markAllRead()" [disabled]="isActionInFlight('notifications-read-all')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isActionInFlight('notifications-read-all') ? 'Marking...' : 'Mark All Read' }}</button>
         }
       </div>
       <div class="notifications-list">
@@ -827,7 +968,7 @@
               <small>{{ n.createdDate | date:'medium' }}</small>
             </div>
             @if (n.status === 'UNREAD') {
-              <button class="btn-read" (click)="markRead(n.notificationId)">Mark Read</button>
+              <button class="btn-read" (click)="markRead(n.notificationId)" [disabled]="isActionInFlight('notification-read:' + n.notificationId)">{{ isActionInFlight('notification-read:' + n.notificationId) ? 'Marking...' : 'Mark Read' }}</button>
             }
           </div>
         }

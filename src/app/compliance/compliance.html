@@ -28,7 +28,7 @@
 
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Compliance Officer' }} 👋</h2>
+        <h2>Hello, {{ auth.getUser()?.name || 'Compliance Officer' }}</h2>
         <p>Compliance records, audit initiation, audit logs and policy monitoring</p>
       </div>
       <div class="stats-grid">
@@ -61,6 +61,100 @@
           </div>
         </div>
       </div>
+
+      <div class="overview-kpi-grid">
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Open Audits</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.openAudits }}</strong>
+        </div>
+        <div class="mini-kpi-card success">
+          <span class="mini-kpi-label">Completed Audits</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.completedAudits }}</strong>
+        </div>
+        <div class="mini-kpi-card warning">
+          <span class="mini-kpi-label">Pending Validations</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.pendingRecords }}</strong>
+        </div>
+        <div class="mini-kpi-card info">
+          <span class="mini-kpi-label">Audit Logs (7d)</span>
+          <strong class="mini-kpi-value">{{ overviewKpis.logs7d }}</strong>
+        </div>
+      </div>
+
+      <div class="overview-analytics-grid">
+        <section class="overview-panel chart-panel">
+          <div class="panel-header">
+            <h3>Audit Trend (Past 7 Days)</h3>
+            <span class="panel-subtext">Initiated vs completed</span>
+          </div>
+
+          <div class="audit-chart">
+            @for (point of auditTrend7d; track point.dateKey) {
+              <div class="chart-bar-group" [attr.title]="point.label + ': initiated ' + point.initiated + ', completed ' + point.completed">
+                <span class="chart-value">{{ point.initiated + point.completed }}</span>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar initiated" [style.height.%]="getAuditTrendBarHeight(point.initiated, 'initiated')"></div>
+                  <div class="chart-bar completed" [style.height.%]="getAuditTrendBarHeight(point.completed, 'completed')"></div>
+                </div>
+                <span class="chart-label">{{ point.label }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="chart-legend">
+            <span><i class="legend-dot initiated"></i> Initiated</span>
+            <span><i class="legend-dot completed"></i> Completed</span>
+          </div>
+        </section>
+
+        <section class="overview-panel queue-panel">
+          <div class="panel-header">
+            <h3>Pending Validations</h3>
+            <span class="panel-subtext">Requires review</span>
+          </div>
+
+          <div class="pending-queue">
+            @if (pendingValidations.length === 0) {
+              <div class="empty-activity">No pending validations.</div>
+            } @else {
+              @for (item of pendingValidations; track item.complianceId) {
+                <div class="queue-item">
+                  <div class="queue-main">
+                    <strong>#{{ item.complianceId }}</strong>
+                    <span>{{ item.type }}: {{ item.entityId }}</span>
+                  </div>
+                  <div class="queue-meta">
+                    <span class="status-badge" [class]="(item.status || 'PENDING').toLowerCase()">{{ item.status || 'PENDING' }}</span>
+                    <small>{{ item.result }}</small>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="overview-panel activity-standalone">
+        <div class="panel-header">
+          <h3>Recent Compliance Activity</h3>
+          <span class="panel-subtext">Records, audits, logs, and alerts</span>
+        </div>
+
+        <div class="activity-feed">
+          @if (recentComplianceActivity.length === 0) {
+            <div class="empty-activity">No recent activity.</div>
+          } @else {
+            @for (item of recentComplianceActivity; track $index) {
+              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
+                <div class="activity-content">
+                  <p class="activity-message">{{ item.message }}</p>
+                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </section>
     }
 
     @if (activeTab === 'records') {
@@ -105,7 +199,7 @@
                 }
               </select>
               @if (recordForm.get('entityId')?.touched && recordForm.get('entityId')?.errors) {
-                <small class="field-error">Entity is required</small>
+                <small class="error-text">Entity is required</small>
               }
             </div>
           </div>
@@ -113,7 +207,7 @@
             <label>Result</label>
             <input type="text" formControlName="result" placeholder="Compliance result" />
             @if (recordForm.get('result')?.touched && recordForm.get('result')?.errors) {
-              <small class="field-error">Result is required</small>
+              <small class="error-text">Result is required</small>
             }
           </div>
           <div class="form-group">
@@ -160,7 +254,7 @@
               }
             </select>
             @if (auditForm.get('scope')?.touched && auditForm.get('scope')?.errors) {
-              <small class="field-error">Scope is required</small>
+              <small class="error-text">Scope is required</small>
             }
           </div>
           <div class="form-group">
@@ -173,23 +267,46 @@
     }
 
     @if (activeTab === 'logs') {
-      <div class="page-header"><h2>Audit Logs</h2></div>
-      <div class="table-card">
-        <table>
-          <thead><tr><th>ID</th><th>User ID</th><th>Action</th><th>Resource</th><th>Timestamp</th></tr></thead>
-          <tbody>
-            @for (l of auditLogs; track l.auditId) {
-              <tr>
-                <td>#{{ l.auditId }}</td>
-                <td>{{ l.userId }}</td>
-                <td>{{ l.action }}</td>
-                <td>{{ l.resource }}</td>
-                <td>{{ l.timestamp | date:'medium' }}</td>
-              </tr>
-            }
-            @empty { <tr><td colspan="5" class="empty">No logs</td></tr> }
-          </tbody>
-        </table>
+      <div class="page-header">
+        <h2>Audit Logs Timeline</h2>
+        <p>Operational ledger of compliance activity</p>
+      </div>
+      <div class="timeline-shell">
+        <div class="audit-timeline">
+          @for (l of getAuditTimelineLogs(); track l.logId ?? l.auditId ?? $index) {
+            <article class="timeline-item" [class]="'timeline-item ' + getAuditLogKind(l)">
+              <div class="timeline-marker">
+                @switch (getAuditLogKind(l)) {
+                  @case ('dispatch') {
+                    <svg viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none'><path d='M16 3h-8v5h-5v8h5v5h8v-5h5v-8h-5v-3z'/></svg>
+                  }
+                  @case ('admission') {
+                    <svg viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg>
+                  }
+                  @case ('audit') {
+                    <svg viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='11' cy='11' r='8'></circle><line x1='21' y1='21' x2='16.65' y2='16.65'></line></svg>
+                  }
+                  @case ('record') {
+                    <svg viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'></path><polyline points='14 2 14 8 20 8'></polyline></svg>
+                  }
+                  @default {
+                    <svg viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none'><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg>
+                  }
+                }
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-header-row">
+                  <h4>{{ getAuditLogTitle(l) }}</h4>
+                  <span class="timeline-time">{{ getAuditLogTimestamp(l) | date:'medium' }}</span>
+                </div>
+                <p>{{ getAuditLogDescription(l) }}</p>
+              </div>
+            </article>
+          }
+          @empty {
+            <p class="empty">No logs</p>
+          }
+        </div>
       </div>
     }
 
