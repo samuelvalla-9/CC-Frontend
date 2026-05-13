@@ -147,9 +147,4 @@ export class AdminService {
     return this.http.post<ApiResponse<User>>(`${this.API}/compliance-officers`, data, { headers: this.headers })
       .pipe(map(res => res.data));
   }
-
-  createHealthOfficer(data: CreateUserRequest): Observable<User> {
-    return this.http.post<ApiResponse<User>>(`${this.API}/health-officers`, data, { headers: this.headers })
-      .pipe(map(res => res.data));
-  }
 }

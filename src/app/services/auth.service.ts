@@ -61,7 +61,6 @@ export class AuthService {
       NURSE: '/nurse',
       DISPATCHER: '/dispatcher',
       ADMIN: '/admin',
-      CITY_HEALTH_OFFICER: '/officer',
       COMPLIANCE_OFFICER: '/compliance',
     };
     this.router.navigate([routes[role!] ?? '/login']);

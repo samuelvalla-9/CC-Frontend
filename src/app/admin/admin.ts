@@ -893,9 +893,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
       case 'COMPLIANCE_OFFICER':
         observable = this.adminService.createComplianceOfficer(basePayload);
         break;
-      case 'CITY_HEALTH_OFFICER':
-        observable = this.adminService.createHealthOfficer(basePayload);
-        break;
       default:
         this.toastService.showError('Invalid role selected');
         this.isSubmitting = false;
@@ -1272,7 +1269,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
         break;
 
       case 'COMPLIANCE_OFFICER':
-      case 'CITY_HEALTH_OFFICER':
       case 'ADMIN':
       default:
         this.fallbackToUserTable(userId);

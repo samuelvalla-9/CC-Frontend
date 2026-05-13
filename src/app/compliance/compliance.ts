@@ -43,6 +43,11 @@ export class ComplianceDashboard implements OnInit {
   recordForm!: FormGroup;
   auditForm!: FormGroup;
   entityTypes = ['FACILITY', 'PATIENT', 'EMERGENCY'];
+  resultOptions: Array<{ value: string; label: string }> = [
+    { value: 'COMPLIANT', label: 'Compliant' },
+    { value: 'NON_COMPLIANT', label: 'Non-compliant' },
+    { value: 'UNDER_REVIEW', label: 'Under Review' }
+  ];
 
   errorMsg = '';
   isCreatingRecord = false;
@@ -70,13 +75,15 @@ export class ComplianceDashboard implements OnInit {
   private initForms() {
     this.recordForm = this.fb.group({
       entityId: ['', [Validators.required]],
-      type: ['FACILITY', Validators.required],
+      type: ['', Validators.required],
       result: ['', Validators.required],
+      date: [this.currentDateInputValue(), Validators.required],
       notes: ['']
     });
     this.recordForm.get('type')!.valueChanges.subscribe(type => this.onEntityTypeChange(type));
     this.auditForm = this.fb.group({
       scope: ['', Validators.required],
+      date: [this.currentDateInputValue(), Validators.required],
       findings: ['']
     });
   }
@@ -186,6 +193,8 @@ export class ComplianceDashboard implements OnInit {
       this.entityOptions = this.patients.map(p => ({ id: p.patientId, label: `#${p.patientId} - ${p.name || 'Patient'} (${p.status})` }));
     } else if (type === 'EMERGENCY') {
       this.entityOptions = this.emergencies.map(e => ({ id: e.emergencyId, label: `#${e.emergencyId} - ${e.type} (${e.date || e.reportedAt})` }));
+    } else {
+      this.entityOptions = [];
     }
   }
 
@@ -224,7 +233,7 @@ export class ComplianceDashboard implements OnInit {
     this.isCreatingRecord = true;
     this.http.post<any>('http://localhost:9090/compliance/records', this.recordForm.value, { headers: this.headers })
       .subscribe({
-        next: () => { this.isCreatingRecord = false; this.recordForm.reset({ entityId: '', type: 'FACILITY', result: '', notes: '' }); this.loadRecords(); this.toastService.showSuccess('Compliance record created successfully'); },
+        next: () => { this.isCreatingRecord = false; this.recordForm.reset({ entityId: '', type: '', result: '', date: this.currentDateInputValue(), notes: '' }); this.entityOptions = []; this.loadRecords(); this.toastService.showSuccess('Compliance record created successfully'); },
         error: (err) => { this.isCreatingRecord = false; this.toastService.showError(err.error?.message || 'Failed to create record') }
       });
   }
@@ -239,9 +248,15 @@ export class ComplianceDashboard implements OnInit {
     this.isInitiatingAudit = true;
     this.http.post<any>('http://localhost:9090/compliance/audits', this.auditForm.value, { headers: this.headers })
       .subscribe({
-        next: () => { this.isInitiatingAudit = false; this.auditForm.reset({ scope: '', findings: '' }); this.loadAudits(); this.toastService.showSuccess('Audit initiated successfully'); },
+        next: () => { this.isInitiatingAudit = false; this.auditForm.reset({ scope: '', date: this.currentDateInputValue(), findings: '' }); this.loadAudits(); this.toastService.showSuccess('Audit initiated successfully'); },
         error: (err) => { this.isInitiatingAudit = false; this.toastService.showError(err.error?.message || 'Failed to initiate audit') }
       });
+  }
+
+  private currentDateInputValue(): string {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
   }
 
   private refreshOverviewInsights() {
@@ -431,19 +446,114 @@ export class ComplianceDashboard implements OnInit {
   }
 
   getAuditLogTitle(log: any): string {
-    const action = String(log?.action ?? 'System Activity');
-    const resource = String(log?.resource ?? 'Platform');
-    return `${action} • ${resource}`;
+    const action = String(log?.action ?? '').toUpperCase();
+    switch (action) {
+      case 'CREATE_COMPLIANCE_RECORD':
+        return 'Created a compliance record';
+      case 'CREATE_AUDIT':
+        return 'Initiated an audit';
+      case 'UPDATE_AUDIT_STATUS':
+        return 'Updated an audit status';
+      case 'VIEW_COMPLIANCE_RECORD':
+        return 'Opened a compliance record';
+      case 'VIEW_AUDIT':
+        return 'Opened an audit';
+      case 'LIST_COMPLIANCE_RECORDS':
+      case 'LIST_COMPLIANCE_RECORDS_BY_ENTITY':
+      case 'LIST_COMPLIANCE_RECORDS_BY_TYPE':
+        return 'Viewed compliance records';
+      case 'LIST_AUDITS':
+        return 'Viewed audits';
+      case 'LIST_AUDIT_LOGS':
+      case 'LIST_AUDIT_LOGS_BY_USER':
+        return 'Viewed audit logs';
+      default:
+        return 'Compliance activity';
+    }
   }
 
   getAuditLogDescription(log: any): string {
-    const user = log?.userId ? `User #${log.userId}` : 'System';
-    const id = log?.logId ?? log?.auditId ?? 'N/A';
-    return `${user} triggered this event (Log #${id}).`;
+    const action = String(log?.action ?? '').toUpperCase();
+    const actor = this.getReadableActor(log);
+    const target = this.getReadableResource(log?.resource);
+
+    if (action === 'CREATE_COMPLIANCE_RECORD') {
+      return `${actor} created ${target}.`;
+    }
+    if (action === 'CREATE_AUDIT') {
+      return `${actor} initiated ${target}.`;
+    }
+    if (action === 'UPDATE_AUDIT_STATUS') {
+      const status = this.extractStatusFromResource(log?.resource);
+      return status
+        ? `${actor} updated ${target} to ${status}.`
+        : `${actor} updated ${target}.`;
+    }
+    if (action.startsWith('VIEW_') || action.startsWith('LIST_')) {
+      return `${actor} viewed ${target}.`;
+    }
+
+    return `${actor} performed an action on ${target}.`;
   }
 
   getAuditLogTimestamp(log: any): Date {
     return this.tryParseDate(log?.timestamp ?? log?.date ?? log?.createdDate) ?? new Date(0);
+  }
+
+  private getReadableActor(log: any): string {
+    const actorId = log?.userId;
+    if (!actorId) return 'System';
+
+    const currentUserId = this.auth.getUser()?.userId ?? this.auth.getUser()?.id;
+    if (currentUserId && Number(currentUserId) === Number(actorId)) return 'You';
+    return `Compliance Officer #${actorId}`;
+  }
+
+  private getReadableResource(resourceRaw: any): string {
+    const resource = String(resourceRaw ?? '').trim();
+    if (!resource) return 'the system';
+
+    if (resource === 'compliance_records') return 'all compliance records';
+    if (resource === 'audits') return 'all audits';
+    if (resource === 'audit_logs') return 'audit logs';
+
+    if (resource.startsWith('compliance_records/entity/')) {
+      const id = resource.split('/').pop();
+      return `compliance records for entity #${id}`;
+    }
+
+    if (resource.startsWith('compliance_records/type/')) {
+      const type = resource.split('/').pop() ?? '';
+      return `${type.replace(/_/g, ' ').toLowerCase()} compliance records`;
+    }
+
+    if (resource.startsWith('compliance_records/')) {
+      const id = resource.split('/').pop();
+      return `compliance record #${id}`;
+    }
+
+    if (resource.startsWith('audit_logs/user/')) {
+      const id = resource.split('/').pop();
+      return `audit logs for user #${id}`;
+    }
+
+    if (resource.startsWith('audits/')) {
+      const [path] = resource.split('?');
+      const id = path.split('/').pop();
+      return `audit #${id}`;
+    }
+
+    return resource.replace(/[_/]/g, ' ').toLowerCase();
+  }
+
+  private extractStatusFromResource(resourceRaw: any): string | null {
+    const resource = String(resourceRaw ?? '');
+    const query = resource.split('?')[1] ?? '';
+    const statusPair = query.split('&').find(pair => pair.startsWith('status='));
+    if (!statusPair) return null;
+    const status = statusPair.split('=')[1] ?? '';
+    if (!status) return null;
+    return status.replace(/_/g, ' ').toLowerCase();
   }
 
   private tryParseDate(value: any): Date | null {

@@ -62,25 +62,6 @@
         </div>
       </div>
 
-      <div class="overview-kpi-grid">
-        <div class="mini-kpi-card warning">
-          <span class="mini-kpi-label">Open Audits</span>
-          <strong class="mini-kpi-value">{{ overviewKpis.openAudits }}</strong>
-        </div>
-        <div class="mini-kpi-card success">
-          <span class="mini-kpi-label">Completed Audits</span>
-          <strong class="mini-kpi-value">{{ overviewKpis.completedAudits }}</strong>
-        </div>
-        <div class="mini-kpi-card warning">
-          <span class="mini-kpi-label">Pending Validations</span>
-          <strong class="mini-kpi-value">{{ overviewKpis.pendingRecords }}</strong>
-        </div>
-        <div class="mini-kpi-card info">
-          <span class="mini-kpi-label">Audit Logs (7d)</span>
-          <strong class="mini-kpi-value">{{ overviewKpis.logs7d }}</strong>
-        </div>
-      </div>
-
       <div class="overview-analytics-grid">
         <section class="overview-panel chart-panel">
           <div class="panel-header">
@@ -187,13 +168,14 @@
             <div class="form-group">
               <label>Entity Type</label>
               <select formControlName="type">
+                <option value="">-Select-</option>
                 @for (t of entityTypes; track t) { <option [value]="t">{{ t }}</option> }
               </select>
             </div>
             <div class="form-group">
               <label>Entity</label>
               <select formControlName="entityId">
-                <option value="" disabled>Select an entity</option>
+                <option value="">-Select-</option>
                 @for (opt of entityOptions; track opt.id) {
                   <option [value]="opt.id">{{ opt.label }}</option>
                 }
@@ -205,9 +187,21 @@
           </div>
           <div class="form-group">
             <label>Result</label>
-            <input type="text" formControlName="result" placeholder="Compliance result" />
+            <select formControlName="result">
+              <option value="">-Select-</option>
+              @for (opt of resultOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
             @if (recordForm.get('result')?.touched && recordForm.get('result')?.errors) {
               <small class="error-text">Result is required</small>
+            }
+          </div>
+          <div class="form-group">
+            <label>Record Date</label>
+            <input type="date" formControlName="date" />
+            @if (recordForm.get('date')?.touched && recordForm.get('date')?.errors) {
+              <small class="error-text">Date is required</small>
             }
           </div>
           <div class="form-group">
@@ -248,7 +242,7 @@
           <div class="form-group">
             <label>Scope (Facility)</label>
             <select formControlName="scope">
-              <option value="" disabled>Select a facility</option>
+              <option value="">-Select-</option>
               @for (f of facilities; track f.facilityId) {
                 <option [value]="f.name">{{ f.name }}</option>
               }
@@ -260,6 +254,13 @@
           <div class="form-group">
             <label>Initial Findings</label>
             <textarea formControlName="findings" rows="4" placeholder="Describe initial findings..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Audit Date</label>
+            <input type="date" formControlName="date" />
+            @if (auditForm.get('date')?.touched && auditForm.get('date')?.errors) {
+              <small class="error-text">Date is required</small>
+            }
           </div>
           <button type="submit" class="btn-primary" [disabled]="isInitiatingAudit"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M22 2L11 13'></path><path d='M22 2L15 22L11 13L2 9L22 2Z'></path></svg> {{ isInitiatingAudit ? 'Initiating...' : 'Initiate Audit' }}</button>
         </form>

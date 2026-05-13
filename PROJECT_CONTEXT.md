@@ -55,7 +55,6 @@ Last updated: 2026-05-11
 - `NURSE`
 - `DISPATCHER`
 - `ADMIN`
-- `CITY_HEALTH_OFFICER`
 - `COMPLIANCE_OFFICER`
 
 Frontend route mapping currently expected:
@@ -64,7 +63,6 @@ Frontend route mapping currently expected:
 - `NURSE` -> `/nurse`
 - `DISPATCHER` -> `/dispatcher`
 - `ADMIN` -> `/admin`
-- `CITY_HEALTH_OFFICER` -> `/officer`
 - `COMPLIANCE_OFFICER` -> `/compliance`
 
 ---
@@ -284,25 +282,7 @@ This reduces repeated discovery work and keeps implementation speed consistent.
 
 ---
 
-### F) CITY_HEALTH_OFFICER Dashboard Backlog
-
-#### Priority P0
-1. City capacity overview
-  - Occupancy/load trend
-  - Facility status distribution
-2. Response SLA by locality table
-3. Resource imbalance alerts
-
-#### Priority P1
-4. Emergency hotspot trend by zone
-5. Facility comparison panel
-
-#### Priority P2
-6. Weekly planning recommendations widget
-
----
-
-### G) COMPLIANCE_OFFICER Dashboard Backlog
+### F) COMPLIANCE_OFFICER Dashboard Backlog
 
 #### Priority P0
 1. Open audits vs completed audits chart

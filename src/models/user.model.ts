@@ -1,4 +1,4 @@
-export type Role = 'CITIZEN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER' | 'ADMIN' | 'COMPLIANCE_OFFICER' | 'CITY_HEALTH_OFFICER';
+export type Role = 'CITIZEN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER' | 'ADMIN' | 'COMPLIANCE_OFFICER';
 
 export interface User {
   id: number;
