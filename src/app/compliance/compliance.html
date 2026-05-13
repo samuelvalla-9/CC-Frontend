@@ -142,7 +142,7 @@
       <div class="page-header"><h2>Compliance Records</h2></div>
       <div class="table-card">
         <table>
-          <thead><tr><th>ID</th><th>Entity ID</th><th>Type</th><th>Result</th><th>Date</th><th>Status</th></tr></thead>
+          <thead><tr><th>ID</th><th>Entity ID</th><th>Type</th><th>Result</th><th>Date</th></tr></thead>
           <tbody>
             @for (r of complianceRecords; track r.complianceId) {
               <tr>
@@ -151,10 +151,9 @@
                 <td>{{ r.type }}</td>
                 <td>{{ r.result }}</td>
                 <td>{{ r.date | date }}</td>
-                <td><span class="status-badge" [class]="r.status?.toLowerCase()">{{ r.status }}</span></td>
               </tr>
             }
-            @empty { <tr><td colspan="6" class="empty">No records</td></tr> }
+            @empty { <tr><td colspan="5" class="empty">No records</td></tr> }
           </tbody>
         </table>
       </div>

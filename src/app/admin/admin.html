@@ -568,27 +568,32 @@
                     <button class="btn-sm btn-info row-action-button" (click)="previewUserDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
                   </td>
                 </tr>
+                @if (previewingUserDocId === doc.documentId) {
+                  <tr class="preview-row">
+                    <td colspan="4">
+                      @if (isLoadingUserDoc) {
+                        <div class="loading-spinner doc-loading"><div class="spinner"></div></div>
+                      }
+                      @if (userDocPreviewUrl) {
+                        <div class="document-preview preview-panel">
+                          <div class="preview-header">
+                            <h3 class="preview-title">Document Preview</h3>
+                            <button class="btn-sm btn-secondary" (click)="previewingUserDocId = null; userDocPreviewUrl = null">Close Preview</button>
+                          </div>
+                          @if (userDocIsImage) {
+                            <img [src]="userDocPreviewUrl" class="preview-media" />
+                          } @else {
+                            <iframe [src]="userDocPreviewUrl" class="preview-media preview-frame"></iframe>
+                          }
+                        </div>
+                      }
+                    </td>
+                  </tr>
+                }
               }
               @empty { <tr><td colspan="4" class="empty">No documents uploaded</td></tr> }
             </tbody>
           </table>
-
-          @if (isLoadingUserDoc) {
-            <div class="loading-spinner doc-loading"><div class="spinner"></div></div>
-          }
-          @if (userDocPreviewUrl) {
-            <div class="document-preview preview-panel">
-              <div class="preview-header">
-                <h3 class="preview-title">Document Preview</h3>
-                <button class="btn-sm btn-secondary" (click)="userDocPreviewUrl = null">Close Preview</button>
-              </div>
-              @if (userDocIsImage) {
-                <img [src]="userDocPreviewUrl" class="preview-media" />
-              } @else {
-                <iframe [src]="userDocPreviewUrl" class="preview-media preview-frame"></iframe>
-              }
-            </div>
-          }
         </div>
       }
 }
@@ -652,31 +657,35 @@
                   </div>
                 </td>
               </tr>
+              @if (previewingDocId === doc.documentId) {
+                <tr class="preview-row">
+                  <td colspan="4">
+                    @if (isLoadingDocument) {
+                      <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading document...</p>
+                      </div>
+                    }
+                    @if (documentPreviewUrl && !isLoadingDocument) {
+                      <div class="document-preview preview-panel">
+                        <div class="preview-header">
+                          <h3 class="preview-title">Document Preview</h3>
+                          <button class="btn-sm btn-secondary" (click)="closePreview()">Close Preview</button>
+                        </div>
+                        @if (documentIsImage) {
+                          <img [src]="documentPreviewUrl" class="preview-media preview-media-lg" />
+                        } @else {
+                          <iframe [src]="documentPreviewUrl" class="preview-media preview-frame preview-media-lg"></iframe>
+                        }
+                      </div>
+                    }
+                  </td>
+                </tr>
+              }
             }
             @empty { <tr><td colspan="4" class="empty">No documents</td></tr> }
           </tbody>
         </table>
-
-        @if (isLoadingDocument) {
-          <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>Loading document...</p>
-          </div>
-        }
-
-        @if (documentPreviewUrl && !isLoadingDocument) {
-          <div class="document-preview preview-panel">
-            <div class="preview-header">
-              <h3 class="preview-title">Document Preview</h3>
-              <button class="btn-sm btn-secondary" (click)="closePreview()">Close Preview</button>
-            </div>
-            @if (documentIsImage) {
-              <img [src]="documentPreviewUrl" class="preview-media preview-media-lg" />
-            } @else {
-              <iframe [src]="documentPreviewUrl" class="preview-media preview-frame preview-media-lg"></iframe>
-            }
-          </div>
-        }
       </div>
     }
 

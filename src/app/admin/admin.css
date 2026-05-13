@@ -367,8 +367,15 @@
   font-weight: 600;
   margin-top: 4px;
   background: #f3e8ff;
+  border: 1px solid #e9d5ff;
   padding: 2px 8px;
   border-radius: 999px;
+}
+
+:host-context([data-theme="dark"]) .ambulance-card .facility-tag {
+  background: rgba(124, 58, 237, 0.22);
+  color: #ddd6fe;
+  border-color: rgba(196, 181, 253, 0.45);
 }
 
 /* Consistent vertical action buttons in tables */
@@ -483,6 +490,16 @@
   border: 1px solid var(--gray-200);
   border-radius: 0.75rem;
   background: #fff;
+}
+
+.preview-row td {
+  padding: 0.5rem 1rem !important;
+  background: var(--gray-50, #f9fafb);
+}
+
+.preview-row .preview-panel {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .preview-header {

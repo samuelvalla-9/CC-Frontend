@@ -49,10 +49,12 @@ export class AdminDashboard implements OnInit, OnDestroy {
   documentPreviewUrl: SafeResourceUrl | null = null;
   documentIsImage = false;
   isLoadingDocument = false;
+  previewingDocId: number | null = null;
   selectedUser: User | null = null;
   userExtraDetails: any = null;
   userDocuments: any[] = [];
   userDocPreviewUrl: SafeResourceUrl | null = null;
+  previewingUserDocId: number | null = null;
   userDocIsImage = false;
   isLoadingUserDoc = false;
   private userCitizenId: number | null = null;
@@ -1294,6 +1296,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
     this.isLoadingUserDoc = true;
     this.userDocPreviewUrl = null;
     this.userDocIsImage = false;
+    this.previewingUserDocId = doc.documentId;
     this.cdr.detectChanges();
 
     this.citizenService.getDocumentBlob(this.userCitizenId, doc.documentId).subscribe({
@@ -1382,6 +1385,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
     this.isLoadingDocument = true;
     this.documentPreviewUrl = null;
     this.documentIsImage = false;
+    this.previewingDocId = doc.documentId;
     this.selectedDocument$.next(doc);
     this.cdr.markForCheck();
 
@@ -1405,6 +1409,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   closePreview() {
     this.documentPreviewUrl = null;
     this.documentIsImage = false;
+    this.previewingDocId = null;
     this.selectedDocument$.next(null);
     this.cdr.markForCheck();
   }

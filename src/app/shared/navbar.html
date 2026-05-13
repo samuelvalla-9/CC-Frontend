@@ -2,12 +2,25 @@
   <div class="navbar-container">
     <a href="/" class="navbar-brand">
       <div class="logo">
-        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="32" cy="32" r="25"></circle>
-          <path d="M43 19a18 18 0 1 0 0 26"></path>
-          <path d="M42 23h8"></path>
-          <path d="M46 19v8"></path>
-          <path d="M18 33h11l5-8 7 16 4-8h7"></path>
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="neonBlueRing" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#67e8f9"/>
+              <stop offset="45%" stop-color="#38bdf8"/>
+              <stop offset="100%" stop-color="#2563eb"/>
+            </linearGradient>
+            <filter id="neonBlueGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.4" flood-color="#67e8f9" flood-opacity="0.95"/>
+              <feDropShadow dx="0" dy="0" stdDeviation="2.4" flood-color="#38bdf8" flood-opacity="0.7"/>
+              <feDropShadow dx="0" dy="0" stdDeviation="3.6" flood-color="#1d4ed8" flood-opacity="0.45"/>
+            </filter>
+          </defs>
+          <!-- Circular C-form mark -->
+          <circle cx="32" cy="32" r="24" stroke="url(#neonBlueRing)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="132 20" transform="rotate(-26 32 32)" filter="url(#neonBlueGlow)"/>
+          <!-- Heartbeat pulse used as the central separator -->
+          <path d="M14 32h11l3-7 5 14 5-14 3 7h10" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Subtle right-side opening emphasis for a cleaner C silhouette -->
+          <path d="M50 32h6" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
         </svg>
       </div>
       <div class="brand-text">
