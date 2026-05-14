@@ -380,14 +380,13 @@
               <select formControlName="role">
                 <option value="">-- Select Role --</option>
                 <option value="DOCTOR">Doctor</option>
-                <option value="NURSE">Nurse</option>
                 <option value="DISPATCHER">Dispatcher</option>
                 <option value="COMPLIANCE_OFFICER">Compliance Officer</option>
               </select>
               @if (userForm.get('role')?.invalid && userForm.get('role')?.touched) {
                 <small class="error-text">Role is required</small>
               }
-            </div>          @if (userForm.get('role')?.value === 'DOCTOR' || userForm.get('role')?.value === 'NURSE' || userForm.get('role')?.value === 'DISPATCHER') {
+            </div>          @if (userForm.get('role')?.value === 'DOCTOR' || userForm.get('role')?.value === 'DISPATCHER') {
             <div class="form-group">
               <label>Assign to Facility *</label>
               <select formControlName="facilityId">
@@ -518,7 +517,7 @@
             <div class="detail-row"><span>Date of Birth</span><strong>{{ userExtraDetails.dateOfBirth || 'N/A' }}</strong></div>
             <div class="detail-row"><span>Gender</span><strong>{{ userExtraDetails.gender || 'N/A' }}</strong></div>
           }
-          @else if (selectedUser.role === 'DOCTOR' || selectedUser.role === 'NURSE' || selectedUser.role === 'DISPATCHER') {
+          @else if (selectedUser.role === 'DOCTOR' || selectedUser.role === 'DISPATCHER') {
             <h3 class="section-divider">Staff Profile</h3>
             <div class="detail-row"><span>Staff ID</span><strong>#{{ userExtraDetails.staffId }}</strong></div>
             <div class="detail-row"><span>Name</span><strong>{{ userExtraDetails.name || selectedUser.name }}</strong></div>

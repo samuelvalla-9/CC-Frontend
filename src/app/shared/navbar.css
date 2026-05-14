@@ -226,6 +226,10 @@
   border-bottom-color: var(--gray-200);
 }
 
+:host-context([data-theme="dark"]) .pulse-line {
+  stroke: #ffffff;
+}
+
 :host-context([data-theme="dark"]) .btn-logout:hover,
 :host-context([data-theme="dark"]) .btn-theme-toggle:hover {
   background-color: var(--gray-200);

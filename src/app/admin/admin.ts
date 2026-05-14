@@ -184,7 +184,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   private isFacilityRequiredRole(role: string | null | undefined): boolean {
-    return role === 'DOCTOR' || role === 'NURSE' || role === 'DISPATCHER';
+    return role === 'DOCTOR' || role === 'DISPATCHER';
   }
 
   private updateFacilityRequirement(role: string | null | undefined): void {
@@ -878,7 +878,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
     let observable;
     switch (formValue.role) {
       case 'DOCTOR':
-      case 'NURSE':
       case 'DISPATCHER':
         if (!formValue.facilityId) {
           this.toastService.showError('Please select a facility for this role');
@@ -1129,7 +1128,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
 
     const targetUser = this.users.find(u => (u.userId || u.id) === id) || this.selectedUser;
     const role = targetUser?.role || '';
-    const isStaffRole = role === 'DOCTOR' || role === 'NURSE' || role === 'DISPATCHER';
+    const isStaffRole = role === 'DOCTOR' || role === 'DISPATCHER';
 
     const confirmed = await this.confirmDialog.confirm({
       title: 'Remove User',
@@ -1252,7 +1251,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
         break;
 
       case 'DOCTOR':
-      case 'NURSE':
       case 'DISPATCHER':
         // staffId == userId in this system
         this.http.get<any>(`http://localhost:9090/staff/${userId}`, { headers: this.headers })

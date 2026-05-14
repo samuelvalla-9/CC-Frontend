@@ -264,7 +264,7 @@ export class DoctorDashboard implements OnInit {
       if (!ts) return;
       const status = String((t as any).status ?? '').toUpperCase();
       events.push({
-        message: `Treatment #${t.treatmentId} for patient #${t.patientId} marked ${status || 'UPDATED'}`,
+        message: `${t.description || 'Treatment'} for patient #${t.patientId} marked ${status || 'UPDATED'}`,
         timestamp: ts,
         severity: status === 'COMPLETED' ? 'success' : (status === 'CANCELLED' ? 'warning' : 'info'),
       });

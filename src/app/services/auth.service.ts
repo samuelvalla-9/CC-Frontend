@@ -58,7 +58,6 @@ export class AuthService {
     const routes: Partial<Record<Role, string>> = {
       CITIZEN: '/citizen',
       DOCTOR: '/doctor',
-      NURSE: '/nurse',
       DISPATCHER: '/dispatcher',
       ADMIN: '/admin',
       COMPLIANCE_OFFICER: '/compliance',
