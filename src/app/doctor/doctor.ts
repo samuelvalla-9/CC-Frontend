@@ -11,6 +11,7 @@ import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
 import { finalize } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-doctor',
@@ -147,12 +148,12 @@ export class DoctorDashboard implements OnInit {
     if (this.staffFacilityId) {
       loadUnassigned(this.staffFacilityId);
     } else {
-      this.http.get<any>(`http://localhost:9090/staff/${doctorId}`, { headers: this.headers }).subscribe({
+      this.http.get<any>(`${environment.apiBaseUrl}/staff/${doctorId}`, { headers: this.headers }).subscribe({
         next: (res) => {
           const staff = res?.data ?? res;
           this.staffFacilityId = staff.facilityId;
           if (staff.facilityId && !this.staffFacilityName) {
-            this.http.get<any>(`http://localhost:9090/facilities/${staff.facilityId}`, { headers: this.headers }).subscribe({
+            this.http.get<any>(`${environment.apiBaseUrl}/facilities/${staff.facilityId}`, { headers: this.headers }).subscribe({
               next: (fRes) => {
                 const facility = fRes?.data ?? fRes;
                 this.staffFacilityName = facility?.name || 'Facility #' + staff.facilityId;
@@ -406,7 +407,7 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadCitizenDetails(citizenId: number) {
-    this.http.get<any>(`http://localhost:9090/api/citizens/${citizenId}`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/api/citizens/${citizenId}`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.zone.run(() => {
@@ -419,7 +420,7 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadEmergencyDetails(emergencyId: number) {
-    this.http.get<any>(`http://localhost:9090/emergencies/${emergencyId}`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/${emergencyId}`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.zone.run(() => {
@@ -525,7 +526,7 @@ export class DoctorDashboard implements OnInit {
     if (this.updatingTreatmentIds.has(treatmentId)) return;
 
     this.updatingTreatmentIds.add(treatmentId);
-    this.http.patch<any>(`http://localhost:9090/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
+    this.http.patch<any>(`${environment.apiBaseUrl}/treatments/${treatmentId}/${status}`, {}, { headers: this.headers })
       .pipe(
         finalize(() => {
           this.updatingTreatmentIds.delete(treatmentId);
@@ -552,7 +553,7 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadAssignedDoctor(patientId: number) {
-    this.http.get<any>(`http://localhost:9090/patients/${patientId}/treatments`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/patients/${patientId}/treatments`, { headers: this.headers })
       .subscribe({
         next: d => {
           const treatments = d?.data ?? d;
@@ -573,7 +574,7 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadDoctorName(patientId: number, doctorId: number) {
-    this.http.get<any>(`http://localhost:9090/staff/${doctorId}`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/staff/${doctorId}`, { headers: this.headers })
       .subscribe({
         next: d => {
           const staff = d?.data ?? d;
@@ -581,7 +582,7 @@ export class DoctorDashboard implements OnInit {
           this.cdr.detectChanges();
         },
         error: () => {
-          this.http.get<any>(`http://localhost:9090/admin/users/${doctorId}`, { headers: this.headers })
+          this.http.get<any>(`${environment.apiBaseUrl}/admin/users/${doctorId}`, { headers: this.headers })
             .subscribe({
               next: d => {
                 const user = d?.data ?? d;

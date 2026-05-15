@@ -12,6 +12,7 @@ import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
 import { finalize, Subscription } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-dispatcher',
@@ -93,7 +94,7 @@ export class DispatcherDashboard implements OnInit {
   }
 
   loadPending() {
-    this.http.get<any>('http://localhost:9090/emergencies/pending', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/pending`, { headers: this.headers })
       .subscribe({ 
         next: d => {
           this.pendingEmergencies = d?.data ?? d;
@@ -148,7 +149,7 @@ export class DispatcherDashboard implements OnInit {
   }
 
   loadAvailableAmbulances() {
-    this.http.get<any>('http://localhost:9090/emergencies/ambulances/available', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/ambulances/available`, { headers: this.headers })
       .subscribe({ 
         next: d => {
           const allAmbulances = d?.data ?? d;
@@ -230,7 +231,7 @@ export class DispatcherDashboard implements OnInit {
     const currentUserId = this.auth.getUser()?.id;
     if (!currentUserId) return;
 
-    this.http.get<any>(`http://localhost:9090/staff/${currentUserId}`, { headers: this.headers }).subscribe({
+    this.http.get<any>(`${environment.apiBaseUrl}/staff/${currentUserId}`, { headers: this.headers }).subscribe({
       next: (staffRes) => {
         const staff = staffRes?.data ?? staffRes;
         const facilityId = Number(staff?.facilityId);
@@ -239,7 +240,7 @@ export class DispatcherDashboard implements OnInit {
         this.staffFacilityId = facilityId;
         if (this.staffFacilityName) return;
 
-        this.http.get<any>(`http://localhost:9090/facilities/${facilityId}`, { headers: this.headers }).subscribe({
+        this.http.get<any>(`${environment.apiBaseUrl}/facilities/${facilityId}`, { headers: this.headers }).subscribe({
           next: (facilityRes) => {
             const facility = facilityRes?.data ?? facilityRes;
             this.staffFacilityName = facility?.name || `Facility #${facilityId}`;

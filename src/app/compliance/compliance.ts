@@ -10,6 +10,7 @@ import { EmergencyService } from '../services/emergency.service';
 import { NotificationService } from '../services/notification.service';
 import { ToastService } from '../services/toast.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-compliance',
@@ -123,7 +124,7 @@ export class ComplianceDashboard implements OnInit {
   }
 
   loadRecords() {
-    this.http.get<any>('http://localhost:9090/compliance/records', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/compliance/records`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.complianceRecords = d?.data ?? d;
@@ -137,7 +138,7 @@ export class ComplianceDashboard implements OnInit {
   }
 
   loadAudits() {
-    this.http.get<any>('http://localhost:9090/compliance/audits', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/compliance/audits`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.audits = d?.data ?? d;
@@ -151,7 +152,7 @@ export class ComplianceDashboard implements OnInit {
   }
 
   loadLogs() {
-    this.http.get<any>('http://localhost:9090/compliance/logs', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/compliance/logs`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.auditLogs = d?.data ?? d;
@@ -231,7 +232,7 @@ export class ComplianceDashboard implements OnInit {
       return;
     }
     this.isCreatingRecord = true;
-    this.http.post<any>('http://localhost:9090/compliance/records', this.recordForm.value, { headers: this.headers })
+    this.http.post<any>(`${environment.apiBaseUrl}/compliance/records`, this.recordForm.value, { headers: this.headers })
       .subscribe({
         next: () => { this.isCreatingRecord = false; this.recordForm.reset({ entityId: '', type: '', result: '', date: this.currentDateInputValue(), notes: '' }); this.entityOptions = []; this.loadRecords(); this.toastService.showSuccess('Compliance record created successfully'); },
         error: (err) => { this.isCreatingRecord = false; this.toastService.showError(err.error?.message || 'Failed to create record') }
@@ -246,7 +247,7 @@ export class ComplianceDashboard implements OnInit {
       return;
     }
     this.isInitiatingAudit = true;
-    this.http.post<any>('http://localhost:9090/compliance/audits', this.auditForm.value, { headers: this.headers })
+    this.http.post<any>(`${environment.apiBaseUrl}/compliance/audits`, this.auditForm.value, { headers: this.headers })
       .subscribe({
         next: () => { this.isInitiatingAudit = false; this.auditForm.reset({ scope: '', date: this.currentDateInputValue(), findings: '' }); this.loadAudits(); this.toastService.showSuccess('Audit initiated successfully'); },
         error: (err) => { this.isInitiatingAudit = false; this.toastService.showError(err.error?.message || 'Failed to initiate audit') }

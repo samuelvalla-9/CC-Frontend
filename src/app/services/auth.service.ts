@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { AuthResponse, User, Role } from '../../models/user.model';
+import { ApiResponse } from '../../models/api-response.model';
+import { environment } from '../../environments/environment';
 
 // Shape the backend actually returns inside ApiResponse.data
 interface BackendAuthData {
@@ -13,29 +15,23 @@ interface BackendAuthData {
   role: Role;
 }
 
-interface BackendApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly API = 'http://localhost:9090';
+  private readonly API = environment.apiBaseUrl;
   private userSubject = new BehaviorSubject<User | null>(this.loadUser());
   user$ = this.userSubject.asObservable();
 
   constructor(private http: HttpClient, private router: Router) {}
 
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<BackendApiResponse<BackendAuthData>>(`${this.API}/auth/login`, { email, password }).pipe(
+    return this.http.post<ApiResponse<BackendAuthData>>(`${this.API}/auth/login`, { email, password }).pipe(
       map(res => this.normalise(res.data)),
       tap(res => this.persist(res))
     );
   }
 
   register(data: any): Observable<AuthResponse> {
-    return this.http.post<BackendApiResponse<BackendAuthData>>(`${this.API}/auth/register`, data).pipe(
+    return this.http.post<ApiResponse<BackendAuthData>>(`${this.API}/auth/register`, data).pipe(
       map(res => this.normalise(res.data)),
       tap(res => this.persist(res))
     );

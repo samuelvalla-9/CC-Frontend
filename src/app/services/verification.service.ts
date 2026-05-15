@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
-import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 export interface PendingCitizen {
   citizenId: number;
@@ -13,7 +13,7 @@ export interface PendingCitizen {
 
 @Injectable({ providedIn: 'root' })
 export class VerificationService {
-  private readonly API = 'http://localhost:9090/api/citizens';
+  private readonly API = `${environment.apiBaseUrl}/api/citizens`;
   private pendingCountSubject = new BehaviorSubject<number>(0);
   private pendingCitizensSubject = new BehaviorSubject<PendingCitizen[]>([]);
   
@@ -21,18 +21,14 @@ export class VerificationService {
   pendingCitizens$ = this.pendingCitizensSubject.asObservable();
   private loaded = false;
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
-
-  private get headers() {
-    return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
-  }
+  constructor(private http: HttpClient) {}
 
   loadPendingVerifications(force = false): Observable<void> {
     if (this.loaded && !force) {
       return new Observable(observer => { observer.next(); observer.complete(); });
     }
     return new Observable(observer => {
-      this.http.get<any>(this.API, { headers: this.headers })
+      this.http.get<any>(this.API)
         .subscribe({
           next: res => {
             const citizens = res?.data ?? res;
@@ -50,7 +46,7 @@ export class VerificationService {
             }
 
             citizens.forEach((citizen: any) => {
-              this.http.get<any>(`${this.API}/${citizen.citizenId}/documents`, { headers: this.headers })
+              this.http.get<any>(`${this.API}/${citizen.citizenId}/documents`)
                 .subscribe({
                   next: docRes => {
                     const docs = docRes?.data ?? docRes;

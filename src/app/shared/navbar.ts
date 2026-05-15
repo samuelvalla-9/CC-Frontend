@@ -7,6 +7,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { Notification } from '../../models/notification.model';
+import { environment } from '../../environments/environment';
 
 interface OmniSearchResult {
   title: string;
@@ -150,7 +151,7 @@ export class Navbar {
       return;
     }
 
-    const users$ = this.http.get<any>('http://localhost:9090/admin/users', { headers: this.headers }).pipe(
+    const users$ = this.http.get<any>(`${environment.apiBaseUrl}/admin/users`, { headers: this.headers }).pipe(
       map(res => {
         const raw = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         return raw
@@ -166,7 +167,7 @@ export class Navbar {
       catchError(() => of([] as OmniSearchResult[]))
     );
 
-    const facilities$ = this.http.get<any>('http://localhost:9090/facilities', { headers: this.headers }).pipe(
+    const facilities$ = this.http.get<any>(`${environment.apiBaseUrl}/facilities`, { headers: this.headers }).pipe(
       map(res => {
         const raw = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         return raw
@@ -182,7 +183,7 @@ export class Navbar {
       catchError(() => of([] as OmniSearchResult[]))
     );
 
-    const patients$ = this.http.get<any>('http://localhost:9090/patients', { headers: this.headers }).pipe(
+    const patients$ = this.http.get<any>(`${environment.apiBaseUrl}/patients`, { headers: this.headers }).pipe(
       map(res => {
         const raw = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         return raw

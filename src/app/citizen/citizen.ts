@@ -13,6 +13,7 @@ import { Notification } from '../../models/notification.model';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs/operators';
 import { EmergencyService } from '../services/emergency.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-citizen',
@@ -415,7 +416,7 @@ export class CitizenDashboard implements OnInit {
   }
 
   loadEmergencies() {
-    this.http.get<any>(`http://localhost:9090/emergencies/my`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/my`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.zone.run(() => {

@@ -191,21 +191,10 @@
         </select>
       </div>
 
-      <div class="bulk-action-bar" *ngIf="hasSelectedFacilities">
-        <div class="bulk-info">{{ selectedFacilityIds.size }} facility(s) selected</div>
-        <div class="bulk-actions">
-          <button class="btn-sm btn-success" (click)="bulkUpdateSelectedFacilities(FacilityStatus.ACTIVE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.ACTIVE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.ACTIVE)) ? 'Activating...' : 'Activate Selected' }}</button>
-          <button class="btn-sm btn-warning" (click)="bulkUpdateSelectedFacilities(FacilityStatus.INACTIVE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.INACTIVE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.INACTIVE)) ? 'Deactivating...' : 'Deactivate Selected' }}</button>
-          <button class="btn-sm btn-info" (click)="bulkUpdateSelectedFacilities(FacilityStatus.MAINTENANCE)" [disabled]="isActionInFlight(bulkFacilityActionKey(FacilityStatus.MAINTENANCE))">{{ isActionInFlight(bulkFacilityActionKey(FacilityStatus.MAINTENANCE)) ? 'Updating...' : 'Set Maintenance' }}</button>
-          <button class="btn-sm btn-secondary" (click)="clearFacilitySelection()">Clear</button>
-        </div>
-      </div>
-
       <div class="table-card enterprise-grid">
         <table>
           <thead>
             <tr>
-              <th class="selection-col"><input type="checkbox" [checked]="areAllVisibleFacilitiesSelected" (change)="toggleSelectAllVisibleFacilities($any($event.target).checked)" /></th>
               <th><button class="sort-header" (click)="sortFacilitiesBy('facilityId')">ID <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'facilityId') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
               <th><button class="sort-header" (click)="sortFacilitiesBy('name')">Name <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'name') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
               <th><button class="sort-header" (click)="sortFacilitiesBy('type')">Type <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (facilitySort.key === 'type') { @if (facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
@@ -218,7 +207,6 @@
           <tbody>
             @for (f of filteredFacilities; track f.facilityId) {
               <tr>
-                <td class="selection-col"><input type="checkbox" [checked]="selectedFacilityIds.has(f.facilityId)" (change)="toggleFacilitySelection(f.facilityId, $any($event.target).checked)" /></td>
                 <td>#{{ f.facilityId }}</td>
                 <td>{{ f.name }}</td>
                 <td>{{ f.type }}</td>
@@ -239,7 +227,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="8" class="empty">No facilities</td></tr> }
+            @empty { <tr><td colspan="7" class="empty">No facilities</td></tr> }
           </tbody>
         </table>
       </div>
@@ -442,20 +430,10 @@
           </form>
         </div>
       }
-      <div class="bulk-action-bar" *ngIf="hasSelectedUsers">
-        <div class="bulk-info">{{ selectedUserIds.size }} user(s) selected</div>
-        <div class="bulk-actions">
-          <button class="btn-sm btn-success" (click)="bulkActivateSelectedUsers()" [disabled]="isActionInFlight(bulkUserActionKey('activate'))">{{ isActionInFlight(bulkUserActionKey('activate')) ? 'Activating...' : 'Activate Selected' }}</button>
-          <button class="btn-sm btn-warning" (click)="bulkDeactivateSelectedUsers()" [disabled]="isActionInFlight(bulkUserActionKey('deactivate'))">{{ isActionInFlight(bulkUserActionKey('deactivate')) ? 'Deactivating...' : 'Deactivate Selected' }}</button>
-          <button class="btn-sm btn-secondary" (click)="clearUserSelection()">Clear</button>
-        </div>
-      </div>
-
       <div class="table-card enterprise-grid">
         <table>
           <thead>
             <tr>
-              <th class="selection-col"><input type="checkbox" [checked]="areAllUsersSelected" (change)="toggleSelectAllUsers($any($event.target).checked)" /></th>
               <th><button class="sort-header" (click)="sortUsersBy('userId')">ID <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'userId') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
               <th><button class="sort-header" (click)="sortUsersBy('name')">Name <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'name') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
               <th><button class="sort-header" (click)="sortUsersBy('email')">Email <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (userSort.key === 'email') { @if (userSort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
@@ -467,7 +445,6 @@
           <tbody>
             @for (u of users; track trackByUserId($index, u)) {
               <tr>
-                <td class="selection-col"><input type="checkbox" [checked]="selectedUserIds.has(u.userId || u.id)" (change)="toggleUserSelection(u.userId || u.id, $any($event.target).checked)" /></td>
                 <td>#{{ u.userId }}</td>
                 <td>{{ u.name }}</td>
                 <td>{{ u.email }}</td>
@@ -489,7 +466,7 @@
 </td>
               </tr>
             }
-            @empty { <tr><td colspan="7" class="empty">No users</td></tr> }
+            @empty { <tr><td colspan="6" class="empty">No users</td></tr> }
           </tbody>
         </table>
       </div>

@@ -19,6 +19,7 @@ import { catchError, finalize, map } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
 import { ConfirmDialogService } from '../shared/confirm-dialog';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-admin',
@@ -67,9 +68,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   patientTreatments: any[] = [];
   errorMsg = '';
 
-  // Enterprise grid state (sorting + bulk actions)
-  selectedFacilityIds = new Set<number>();
-  selectedUserIds = new Set<number>();
+  // Enterprise grid state (sorting)
   private actionInFlight = new Set<string>();
   facilitySort: { key: 'facilityId' | 'name' | 'type' | 'location' | 'capacity' | 'status'; direction: 'asc' | 'desc' } = { key: 'facilityId', direction: 'asc' };
   userSort: { key: 'userId' | 'name' | 'email' | 'role' | 'status'; direction: 'asc' | 'desc' } = { key: 'userId', direction: 'asc' };
@@ -102,14 +101,14 @@ export class AdminDashboard implements OnInit, OnDestroy {
     responseMs: number | null;
     details?: string;
   }> = [
-    { key: 'gateway', label: 'API Gateway', endpoint: '/actuator/health', probePath: 'http://localhost:9090/actuator/health', status: 'UNKNOWN', responseMs: null },
-    { key: 'auth', label: 'Auth Service', endpoint: '/admin/users', probePath: 'http://localhost:9090/admin/users', status: 'UNKNOWN', responseMs: null },
-    { key: 'citizen', label: 'Citizen Service', endpoint: '/api/citizens', probePath: 'http://localhost:9090/api/citizens', status: 'UNKNOWN', responseMs: null },
-    { key: 'emergency', label: 'Emergency Service', endpoint: '/emergencies', probePath: 'http://localhost:9090/emergencies', status: 'UNKNOWN', responseMs: null },
-    { key: 'facility', label: 'Facility Service', endpoint: '/facilities', probePath: 'http://localhost:9090/facilities', status: 'UNKNOWN', responseMs: null },
-    { key: 'patient', label: 'Patient/Treatment Service', endpoint: '/patients', probePath: 'http://localhost:9090/patients', status: 'UNKNOWN', responseMs: null },
-    { key: 'compliance', label: 'Compliance Service', endpoint: '/compliance/logs', probePath: 'http://localhost:9090/compliance/logs', status: 'UNKNOWN', responseMs: null },
-    { key: 'notification', label: 'Notification Service', endpoint: '/notifications/user/{userId}', probePath: 'http://localhost:9090/notifications/user/{userId}', status: 'UNKNOWN', responseMs: null },
+    { key: 'gateway', label: 'API Gateway', endpoint: '/actuator/health', probePath: `${environment.apiBaseUrl}/actuator/health`, status: 'UNKNOWN', responseMs: null },
+    { key: 'auth', label: 'Auth Service', endpoint: '/admin/users', probePath: `${environment.apiBaseUrl}/admin/users`, status: 'UNKNOWN', responseMs: null },
+    { key: 'citizen', label: 'Citizen Service', endpoint: '/api/citizens', probePath: `${environment.apiBaseUrl}/api/citizens`, status: 'UNKNOWN', responseMs: null },
+    { key: 'emergency', label: 'Emergency Service', endpoint: '/emergencies', probePath: `${environment.apiBaseUrl}/emergencies`, status: 'UNKNOWN', responseMs: null },
+    { key: 'facility', label: 'Facility Service', endpoint: '/facilities', probePath: `${environment.apiBaseUrl}/facilities`, status: 'UNKNOWN', responseMs: null },
+    { key: 'patient', label: 'Patient/Treatment Service', endpoint: '/patients', probePath: `${environment.apiBaseUrl}/patients`, status: 'UNKNOWN', responseMs: null },
+    { key: 'compliance', label: 'Compliance Service', endpoint: '/compliance/logs', probePath: `${environment.apiBaseUrl}/compliance/logs`, status: 'UNKNOWN', responseMs: null },
+    { key: 'notification', label: 'Notification Service', endpoint: '/notifications/user/{userId}', probePath: `${environment.apiBaseUrl}/notifications/user/{userId}`, status: 'UNKNOWN', responseMs: null },
     { key: 'registry', label: 'Service Registry', endpoint: 'Inferred via Gateway discovery', probePath: null, status: 'UNKNOWN', responseMs: null },
   ];
 
@@ -296,7 +295,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
     this.facilityService.getAllFacilities().subscribe({
       next: d => {
         this.facilities = d;
-        this.selectedFacilityIds.clear();
         this.applyFacilityFilter();
         this.cdr.detectChanges();
       },
@@ -331,66 +329,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
       const bValue = (b as any)?.[key];
       return this.compareGridValues(aValue, bValue) * dir;
     });
-  }
-
-  get areAllVisibleFacilitiesSelected() {
-    return this.filteredFacilities.length > 0 &&
-      this.filteredFacilities.every(f => this.selectedFacilityIds.has(f.facilityId));
-  }
-
-  get hasSelectedFacilities() {
-    return this.selectedFacilityIds.size > 0;
-  }
-
-  toggleFacilitySelection(facilityId: number, checked: boolean) {
-    if (checked) {
-      this.selectedFacilityIds.add(facilityId);
-    } else {
-      this.selectedFacilityIds.delete(facilityId);
-    }
-  }
-
-  toggleSelectAllVisibleFacilities(checked: boolean) {
-    if (checked) {
-      this.filteredFacilities.forEach(f => this.selectedFacilityIds.add(f.facilityId));
-      return;
-    }
-    this.filteredFacilities.forEach(f => this.selectedFacilityIds.delete(f.facilityId));
-  }
-
-  clearFacilitySelection() {
-    this.selectedFacilityIds.clear();
-  }
-
-  bulkUpdateSelectedFacilities(status: FacilityStatus) {
-    const actionKey = this.bulkFacilityActionKey(status);
-    if (!this.beginAction(actionKey)) return;
-
-    const selectedIds = Array.from(this.selectedFacilityIds)
-      .filter(id => {
-        const facility = this.facilities.find(f => f.facilityId === id);
-        return !!facility && facility.status !== status;
-      });
-
-    if (selectedIds.length === 0) {
-      this.toastService.showWarning('No selected facilities need this status change');
-      this.endAction(actionKey);
-      return;
-    }
-
-    forkJoin(selectedIds.map(id => this.facilityService.updateFacilityStatus(id, status)))
-      .pipe(finalize(() => this.endAction(actionKey)))
-      .subscribe({
-        next: () => {
-          this.toastService.showSuccess(`${selectedIds.length} facility(s) updated to ${status}`);
-          this.selectedFacilityIds.clear();
-          this.loadFacilities();
-        },
-        error: (err: any) => {
-          this.toastService.showError(this.extractErrorMessage(err, 'Failed to apply bulk facility status update'));
-          this.loadFacilities();
-        }
-      });
   }
 
   onFacilityFilterChange() {
@@ -469,7 +407,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
       next: d => {
         console.log('Users loaded:', d);
         this.users = d;
-        this.selectedUserIds.clear();
         this.applyUserSort();
         this.refreshOverviewInsights();
       },
@@ -499,97 +436,6 @@ export class AdminDashboard implements OnInit, OnDestroy {
     });
   }
 
-  get areAllUsersSelected() {
-    return this.users.length > 0 && this.users.every(u => this.selectedUserIds.has(u.userId || u.id));
-  }
-
-  get hasSelectedUsers() {
-    return this.selectedUserIds.size > 0;
-  }
-
-  toggleUserSelection(userId: number, checked: boolean) {
-    if (checked) {
-      this.selectedUserIds.add(userId);
-    } else {
-      this.selectedUserIds.delete(userId);
-    }
-  }
-
-  toggleSelectAllUsers(checked: boolean) {
-    if (checked) {
-      this.users.forEach(u => this.selectedUserIds.add(u.userId || u.id));
-      return;
-    }
-    this.selectedUserIds.clear();
-  }
-
-  clearUserSelection() {
-    this.selectedUserIds.clear();
-  }
-
-  bulkDeactivateSelectedUsers() {
-    const actionKey = this.bulkUserActionKey('deactivate');
-    if (!this.beginAction(actionKey)) return;
-
-    const currentUserId = this.auth.getUser()?.userId || this.auth.getUser()?.id;
-    const targetIds = Array.from(this.selectedUserIds)
-      .filter(id => id !== currentUserId)
-      .filter(id => {
-        const user = this.users.find(u => (u.userId || u.id) === id);
-        return !!user && (user.status || 'ACTIVE') !== 'INACTIVE';
-      });
-
-    if (targetIds.length === 0) {
-      this.toastService.showWarning('No selected users can be deactivated');
-      this.endAction(actionKey);
-      return;
-    }
-
-    forkJoin(targetIds.map(id => this.adminService.deactivateUser(id)))
-      .pipe(finalize(() => this.endAction(actionKey)))
-      .subscribe({
-        next: () => {
-          this.toastService.showSuccess(`${targetIds.length} user(s) deactivated`);
-          this.selectedUserIds.clear();
-          this.loadUsers();
-        },
-        error: (err: any) => {
-          this.toastService.showError(this.extractErrorMessage(err, 'Failed to deactivate selected users'));
-          this.loadUsers();
-        }
-      });
-  }
-
-  bulkActivateSelectedUsers() {
-    const actionKey = this.bulkUserActionKey('activate');
-    if (!this.beginAction(actionKey)) return;
-
-    const targetIds = Array.from(this.selectedUserIds).filter(id => {
-      const user = this.users.find(u => (u.userId || u.id) === id);
-      return !!user && (user.status || 'ACTIVE') !== 'ACTIVE';
-    });
-
-    if (targetIds.length === 0) {
-      this.toastService.showWarning('No selected users can be activated');
-      this.endAction(actionKey);
-      return;
-    }
-
-    forkJoin(targetIds.map(id => this.adminService.activateUser(id)))
-      .pipe(finalize(() => this.endAction(actionKey)))
-      .subscribe({
-        next: () => {
-          this.toastService.showSuccess(`${targetIds.length} user(s) activated`);
-          this.selectedUserIds.clear();
-          this.loadUsers();
-        },
-        error: (err: any) => {
-          this.toastService.showError(this.extractErrorMessage(err, 'Failed to activate selected users'));
-          this.loadUsers();
-        }
-      });
-  }
-
   getSortDirection(column: string): 'asc' | 'desc' | null {
     if (this.userSort.key === column) return this.userSort.direction;
     if (this.facilitySort.key === column) return this.facilitySort.direction;
@@ -609,7 +455,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   loadPatients() {
-    this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/patients`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.patients = d?.data ?? d;
@@ -650,7 +496,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   loadEmergencies() {
-    this.http.get<any>('http://localhost:9090/emergencies', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.allEmergencies = d?.data ?? d ?? [];
@@ -665,7 +511,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   loadTreatments() {
-    this.http.get<any>('http://localhost:9090/treatments', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/treatments`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.allTreatments = d?.data ?? d ?? [];
@@ -680,7 +526,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   loadAssignedDoctor(patientId: number) {
-    this.http.get<any>(`http://localhost:9090/patients/${patientId}/treatments`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/patients/${patientId}/treatments`, { headers: this.headers })
       .subscribe({
         next: d => {
           const treatments = d?.data ?? d;
@@ -698,7 +544,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
 
   loadDoctorName(patientId: number, doctorId: number) {
     // Try to get staff info first
-    this.http.get<any>(`http://localhost:9090/staff/${doctorId}`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/staff/${doctorId}`, { headers: this.headers })
       .subscribe({
         next: d => {
           const staff = d?.data ?? d;
@@ -707,7 +553,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
         },
         error: () => {
           // Fallback to AuthService if staff record doesn't exist
-          this.http.get<any>(`http://localhost:9090/admin/users/${doctorId}`, { headers: this.headers })
+          this.http.get<any>(`${environment.apiBaseUrl}/admin/users/${doctorId}`, { headers: this.headers })
             .subscribe({
               next: d => {
                 const user = d?.data ?? d;
@@ -758,7 +604,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
     const actionKey = this.patientDischargeActionKey(patientId);
     if (!this.beginAction(actionKey)) return;
 
-    this.http.patch<any>(`http://localhost:9090/patients/${patientId}/status?status=DISCHARGED`, {}, { headers: this.headers })
+    this.http.patch<any>(`${environment.apiBaseUrl}/patients/${patientId}/status?status=DISCHARGED`, {}, { headers: this.headers })
       .pipe(finalize(() => this.endAction(actionKey)))
       .subscribe({
         next: () => {
@@ -784,12 +630,12 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   loadDispatchedEmergencies() {
-    this.http.get<any>('http://localhost:9090/emergencies/dispatched', { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/dispatched`, { headers: this.headers })
       .subscribe({
         next: d => {
           const allDispatched = d?.data ?? d;
           // Filter out emergencies that are already admitted by checking if patient exists
-          this.http.get<any>('http://localhost:9090/patients', { headers: this.headers })
+          this.http.get<any>(`${environment.apiBaseUrl}/patients`, { headers: this.headers })
             .subscribe({
               next: patientsRes => {
                 const patients = patientsRes?.data ?? patientsRes;
@@ -940,7 +786,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
       return;
     }
     this.isRegisteringAmbulance = true;
-    this.http.post<any>('http://localhost:9090/emergencies/admin/ambulances', this.ambulanceForm.value, { headers: this.headers })
+    this.http.post<any>(`${environment.apiBaseUrl}/emergencies/admin/ambulances`, this.ambulanceForm.value, { headers: this.headers })
       .pipe(finalize(() => {
         this.isRegisteringAmbulance = false;
         this.endAction(actionKey);
@@ -1021,7 +867,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
       notes: this.admitForm.notes
     };
     this.isAdmittingPatient = true;
-    this.http.post<any>('http://localhost:9090/patients/admit', payload, { headers: this.headers })
+    this.http.post<any>(`${environment.apiBaseUrl}/patients/admit`, payload, { headers: this.headers })
       .pipe(finalize(() => {
         this.isAdmittingPatient = false;
         this.endAction(actionKey);
@@ -1228,7 +1074,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
     switch (role) {
       case 'CITIZEN':
         // citizenId == userId in this system
-        this.http.get<any>(`http://localhost:9090/api/citizens/${userId}`, { headers: this.headers })
+        this.http.get<any>(`${environment.apiBaseUrl}/api/citizens/${userId}`, { headers: this.headers })
           .subscribe({
             next: res => {
               const citizen = res?.data ?? res;
@@ -1237,7 +1083,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
                 this.userCitizenId = citizen.citizenId;
                 this.cdr.detectChanges();
                 // Load documents
-                this.http.get<any>(`http://localhost:9090/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
+                this.http.get<any>(`${environment.apiBaseUrl}/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
                   .subscribe({
                     next: docRes => { this.userDocuments = docRes?.data ?? docRes; this.cdr.detectChanges(); },
                     error: () => this.userDocuments = []
@@ -1253,7 +1099,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
       case 'DOCTOR':
       case 'DISPATCHER':
         // staffId == userId in this system
-        this.http.get<any>(`http://localhost:9090/staff/${userId}`, { headers: this.headers })
+        this.http.get<any>(`${environment.apiBaseUrl}/staff/${userId}`, { headers: this.headers })
           .subscribe({
             next: res => {
               const staff = res?.data ?? res;
@@ -1361,7 +1207,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
     this.setTab('verifyDocuments');
     this.cdr.markForCheck();
 
-    this.http.get<any>(`http://localhost:9090/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/api/citizens/${citizen.citizenId}/documents`, { headers: this.headers })
       .subscribe({
         next: res => {
           this.citizenDocuments = res?.data ?? res;
@@ -1620,16 +1466,8 @@ export class AdminDashboard implements OnInit, OnDestroy {
     return `facility-status:${facilityId}:${status}`;
   }
 
-  bulkFacilityActionKey(status: FacilityStatus): string {
-    return `bulk-facility-status:${status}`;
-  }
-
   userActionKey(action: 'activate' | 'deactivate' | 'remove', userId: number): string {
     return `user:${action}:${userId}`;
-  }
-
-  bulkUserActionKey(action: 'activate' | 'deactivate'): string {
-    return `bulk-user:${action}`;
   }
 
   ambulanceStatusActionKey(ambulanceId: number, status: string): string {
@@ -1684,7 +1522,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
       });
 
     // Load emergency details
-    this.http.get<any>(`http://localhost:9090/emergencies/${patient.emergencyId}`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/emergencies/${patient.emergencyId}`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.patientEmergencyDetails = d?.data ?? d;
@@ -1694,7 +1532,7 @@ export class AdminDashboard implements OnInit, OnDestroy {
       });
 
     // Load treatments
-    this.http.get<any>(`http://localhost:9090/patients/${patient.patientId}/treatments`, { headers: this.headers })
+    this.http.get<any>(`${environment.apiBaseUrl}/patients/${patient.patientId}/treatments`, { headers: this.headers })
       .subscribe({
         next: d => {
           this.patientTreatments = d?.data ?? d;
