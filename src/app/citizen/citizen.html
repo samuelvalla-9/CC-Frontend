@@ -27,8 +27,14 @@
   <main class="content">
     @if (activeTab === 'overview') {
       <div class="page-header">
-        <h2>Hello, {{ auth.getUser()?.name || 'Citizen' }}</h2>
-        <p>Manage your healthcare services and emergencies</p>
+        <div>
+          <h2>Hello, {{ auth.getUser()?.name || 'Citizen' }}</h2>
+          <p>Manage your healthcare services and emergencies</p>
+        </div>
+        <button class="btn-danger overview-report-btn" (click)="setTab('report')">
+          <svg class='icon' viewBox='0 0 24 24' width='1.1em' height='1.1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><circle cx='12' cy='12' r='10'></circle><line x1='12' y1='8' x2='12' y2='12'></line><line x1='12' y1='16' x2='12.01' y2='16'></line></svg>
+          Report Emergency
+        </button>
       </div>
       <div class="stats-grid">
         <div class="stat-card blue card-interactive" (click)="setTab('emergencies')">
@@ -70,80 +76,6 @@
         </div>
       </div>
 
-      <div class="overview-analytics-grid">
-        <section class="overview-panel preparedness-panel">
-          <div class="panel-header">
-            <h3>Emergency Preparedness</h3>
-            <span class="panel-subtext">Emergency reporting is for urgent, genuine incidents only</span>
-          </div>
-
-          <ul class="preparedness-list">
-            <li>
-              <strong>Use only for real emergencies</strong>
-              <span>Submit a report only when there is immediate risk to life, health, or public safety.</span>
-            </li>
-            <li>
-              <strong>Provide accurate incident details</strong>
-              <span>Share exact location, landmarks, and brief facts so responders can act without delay.</span>
-            </li>
-            <li>
-              <strong>Account readiness requirement</strong>
-              <span>
-                @if (emergencyReportingBlocker) {
-                  {{ emergencyReportingBlocker.subtitle }}
-                } @else {
-                  Your account is verified and eligible to report emergencies when necessary.
-                }
-              </span>
-            </li>
-            <li>
-              <strong>Ongoing case status</strong>
-              <span>You currently have {{ activeEmergencyCount }} active emergency case(s). Follow official updates in notifications.</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="overview-panel queue-panel">
-          <div class="panel-header">
-            <h3>Action Queue</h3>
-            <span class="panel-subtext">What to do next</span>
-          </div>
-
-          <div class="action-queue">
-            @for (item of personalActionQueue; track $index) {
-              <button [class]="'queue-item ' + item.severity" (click)="setTab(item.targetTab)">
-                <div class="queue-main">
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ item.subtitle }}</span>
-                </div>
-                <span class="queue-open">Open →</span>
-              </button>
-            }
-          </div>
-        </section>
-      </div>
-
-      <section class="overview-panel activity-standalone">
-        <div class="panel-header">
-          <h3>Recent Personal Activity</h3>
-          <span class="panel-subtext">Emergencies, documents and alerts</span>
-        </div>
-
-        <div class="activity-feed">
-          @if (recentPersonalActivity.length === 0) {
-            <div class="empty-activity">No recent activity yet.</div>
-          } @else {
-            @for (item of recentPersonalActivity; track $index) {
-              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
-                <div class="activity-content">
-                  <p class="activity-message">{{ item.message }}</p>
-                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
-                </div>
-              </div>
-            }
-          }
-        </div>
-      </section>
     }
 
     @if (activeTab === 'profile') {

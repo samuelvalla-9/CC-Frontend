@@ -111,42 +111,38 @@ export class DoctorDashboard implements OnInit {
     const doctorId = this.auth.getUser()?.id;
     if (!doctorId) return;
 
-    const loadUnassigned = (facilityId?: number) => {
-      const unassigned$ = facilityId
-        ? this.patientService.getUnassignedPatientsByFacility(facilityId)
-        : this.patientService.getUnassignedPatients();
+    const loadFacilityPatients = (facilityId?: number) => {
+      const patients$ = facilityId
+        ? this.patientService.getPatientsByFacility(facilityId)
+        : this.patientService.getAllPatients();
 
-      const myPatients$ = facilityId
-        ? this.patientService.getPatientsByFacilityAndDoctor(facilityId, doctorId)
-        : this.patientService.getPatientsByDoctor(doctorId);
-
-      unassigned$.subscribe({
+      patients$.subscribe({
         next: d => {
-          this.patients = d;
-          d.forEach(p => this.loadAssignedDoctor(p.patientId));
-          this.cdr.detectChanges();
-        },
-        error: () => this.toastService.showError('Failed to load patients')
-      });
+          const allFacilityPatients = d ?? [];
+          this.patientDoctorMap.clear();
+          this.patients = this.sortPatientsForPatientsTab(allFacilityPatients);
+          this.patients.forEach(p => this.loadAssignedDoctor(p));
 
-      myPatients$.subscribe({
-        next: d => {
-          this.myPatients = d;
-          this.assignedPatientIds = new Set(d.map(p => p.patientId));
+          this.myPatients = allFacilityPatients.filter(p => Number(p.assignedStaffId) === doctorId);
+          this.assignedPatientIds = new Set(this.myPatients.map(p => p.patientId));
           this.applyMyPatientsFilter();
           this.refreshOverviewInsights();
+
           this.cdr.detectChanges();
         },
         error: () => {
+          this.toastService.showError('Failed to load patients');
           this.myPatients = [];
+          this.assignedPatientIds.clear();
           this.applyMyPatientsFilter();
           this.refreshOverviewInsights();
+          this.cdr.detectChanges();
         }
       });
     };
 
     if (this.staffFacilityId) {
-      loadUnassigned(this.staffFacilityId);
+      loadFacilityPatients(this.staffFacilityId);
     } else {
       this.http.get<any>(`${environment.apiBaseUrl}/staff/${doctorId}`, { headers: this.headers }).subscribe({
         next: (res) => {
@@ -162,11 +158,34 @@ export class DoctorDashboard implements OnInit {
               error: () => { this.staffFacilityName = 'Facility #' + staff.facilityId; }
             });
           }
-          loadUnassigned(this.staffFacilityId ?? undefined);
+          loadFacilityPatients(this.staffFacilityId ?? undefined);
         },
-        error: () => loadUnassigned()
+        error: () => loadFacilityPatients()
       });
     }
+  }
+
+  private sortPatientsForPatientsTab(patients: Patient[]): Patient[] {
+    return [...patients].sort((a, b) => {
+      const aUnassigned = this.isPatientUnassigned(a);
+      const bUnassigned = this.isPatientUnassigned(b);
+
+      if (aUnassigned !== bUnassigned) {
+        return aUnassigned ? -1 : 1;
+      }
+
+      const aAdmission = this.tryParseDate(a.admissionDate)?.getTime() ?? 0;
+      const bAdmission = this.tryParseDate(b.admissionDate)?.getTime() ?? 0;
+      return bAdmission - aAdmission;
+    });
+  }
+
+  isPatientUnassigned(patient: Patient): boolean {
+    if (patient.assignedStaffId) return false;
+
+    const assignedDoctor = this.patientDoctorMap.get(patient.patientId);
+    if (!assignedDoctor) return true;
+    return assignedDoctor === 'Not assigned';
   }
 
   loadMyTreatments() {
@@ -184,10 +203,18 @@ export class DoctorDashboard implements OnInit {
   }
 
   loadNotifications() {
+    this.notificationService.getMyUnreadCount().subscribe({
+      next: count => {
+        this.unreadCount = count;
+        this.refreshOverviewInsights();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
     this.notificationService.getMyNotifications().subscribe({
       next: d => {
         this.notifications = d;
-        this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
         this.refreshOverviewInsights();
         this.cdr.detectChanges();
       },
@@ -552,22 +579,30 @@ export class DoctorDashboard implements OnInit {
     return this.updatingTreatmentIds.has(treatmentId);
   }
 
-  loadAssignedDoctor(patientId: number) {
-    this.http.get<any>(`${environment.apiBaseUrl}/patients/${patientId}/treatments`, { headers: this.headers })
+  loadAssignedDoctor(patient: Patient) {
+    if (patient.assignedStaffId) {
+      this.loadDoctorName(patient.patientId, patient.assignedStaffId);
+      return;
+    }
+
+    this.http.get<any>(`${environment.apiBaseUrl}/patients/${patient.patientId}/treatments`, { headers: this.headers })
       .subscribe({
         next: d => {
           const treatments = d?.data ?? d;
           if (treatments && treatments.length > 0) {
             const latestTreatment = treatments[0];
             if (latestTreatment.assignedById) {
-              this.loadDoctorName(patientId, latestTreatment.assignedById);
+              this.loadDoctorName(patient.patientId, latestTreatment.assignedById);
             }
           } else {
-            this.patientDoctorMap.set(patientId, 'Not assigned');
+            this.patientDoctorMap.set(patient.patientId, 'Not assigned');
+            this.patients = this.sortPatientsForPatientsTab(this.patients);
+            this.cdr.detectChanges();
           }
         },
         error: () => {
-          this.patientDoctorMap.set(patientId, 'Not assigned');
+          this.patientDoctorMap.set(patient.patientId, 'Not assigned');
+          this.patients = this.sortPatientsForPatientsTab(this.patients);
           this.cdr.detectChanges();
         }
       });
@@ -579,6 +614,7 @@ export class DoctorDashboard implements OnInit {
         next: d => {
           const staff = d?.data ?? d;
           this.patientDoctorMap.set(patientId, staff.name);
+          this.patients = this.sortPatientsForPatientsTab(this.patients);
           this.cdr.detectChanges();
         },
         error: () => {
@@ -587,10 +623,12 @@ export class DoctorDashboard implements OnInit {
               next: d => {
                 const user = d?.data ?? d;
                 this.patientDoctorMap.set(patientId, user.name);
+                this.patients = this.sortPatientsForPatientsTab(this.patients);
                 this.cdr.detectChanges();
               },
               error: () => {
                 this.patientDoctorMap.set(patientId, 'Unknown Doctor');
+                this.patients = this.sortPatientsForPatientsTab(this.patients);
                 this.cdr.detectChanges();
               }
             });
@@ -602,4 +640,3 @@ export class DoctorDashboard implements OnInit {
     return this.patientDoctorMap.get(patientId) || 'Loading...';
   }
 }
-

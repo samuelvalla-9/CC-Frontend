@@ -1,0 +1,39 @@
+@if (vm.selectedFacility) {
+  <div class="page-header">
+    <h2>Edit Facility: {{ vm.selectedFacility.name }}</h2>
+    <button class="btn-back" (click)="vm.cancelEditFacility()">← Back</button>
+  </div>
+  <div class="form-card">
+    @if (vm.errorMsg) { <div class="alert error">{{ vm.errorMsg }}</div> }
+    <form [formGroup]="vm.editFacilityForm" (ngSubmit)="vm.submitEditFacility()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Facility Name *</label>
+          <input type="text" formControlName="name" placeholder="Hospital name" />
+        </div>
+        <div class="form-group">
+          <label>Type *</label>
+          <select formControlName="type">
+            <option value="HOSPITAL">Hospital</option>
+            <option value="CLINIC">Clinic</option>
+            <option value="AMBULANCE_STATION">Ambulance Station</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location *</label>
+          <input type="text" formControlName="location" placeholder="Address" />
+        </div>
+        <div class="form-group">
+          <label>Capacity *</label>
+          <input type="number" formControlName="capacity" placeholder="Bed count" />
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem">
+        <button type="submit" class="btn-primary" [disabled]="vm.isSavingFacility || vm.editFacilityForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'></path><polyline points='17 21 17 13 7 13 7 21'></polyline><polyline points='7 3 7 8 15 8'></polyline></svg> {{ vm.isSavingFacility ? 'Updating...' : 'Update Facility' }}</button>
+        <button type="button" class="btn-secondary" (click)="vm.cancelEditFacility()">Cancel</button>
+      </div>
+    </form>
+  </div>
+}

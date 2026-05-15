@@ -167,8 +167,8 @@ export class ComplianceDashboard implements OnInit {
 
   loadFacilities() {
     this.facilityService.getAllFacilities().subscribe({
-      next: d => { console.log('Facilities loaded:', d); this.facilities = d; this.onEntityTypeChange(this.recordForm.get('type')!.value); },
-      error: (err) => console.error('Failed to load facilities:', err)
+      next: d => { this.facilities = d; this.onEntityTypeChange(this.recordForm.get('type')!.value); },
+      error: () => {}
     });
   }
 
@@ -200,10 +200,17 @@ export class ComplianceDashboard implements OnInit {
   }
 
   loadNotifications() {
+    this.notificationService.getMyUnreadCount().subscribe({
+      next: count => {
+        this.unreadCount = count;
+        this.refreshOverviewInsights();
+      },
+      error: () => {}
+    });
+
     this.notificationService.getMyNotifications().subscribe({
       next: d => {
         this.notifications = d;
-        this.unreadCount = d.filter((n: any) => n.status === 'UNREAD').length;
         this.refreshOverviewInsights();
       },
       error: () => {}

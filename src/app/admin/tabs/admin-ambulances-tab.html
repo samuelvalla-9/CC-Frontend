@@ -1,0 +1,70 @@
+<div class="page-header"><h2>Ambulance Registry</h2></div>
+<div class="form-card" style="margin-bottom:1.5rem">
+  @if (vm.errorMsg) { <div class="alert error">{{ vm.errorMsg }}</div> }
+  <form [formGroup]="vm.ambulanceForm" (ngSubmit)="vm.registerAmbulance()">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Vehicle Number * (e.g. AMB-001, KA-1234)</label>
+        <input type="text" formControlName="vehicleNumber" placeholder="e.g. AMB-001" />
+        @if (vm.ambulanceForm.get('vehicleNumber')?.invalid && vm.ambulanceForm.get('vehicleNumber')?.touched) {
+          <small class="error-text">
+            @if (vm.ambulanceForm.get('vehicleNumber')?.errors?.['required']) { Vehicle number is required }
+            @else if (vm.ambulanceForm.get('vehicleNumber')?.errors?.['pattern']) { Must follow pattern: 2-4 uppercase letters, dash, 2-4 digits (e.g. AMB-001) }
+          </small>
+        }
+      </div>
+      <div class="form-group">
+        <label>Model (Optional)</label>
+        <input type="text" formControlName="model" placeholder="e.g. Mercedes Sprinter" />
+      </div>
+      <div class="form-group">
+        <label>Assigned Facility *</label>
+        <select formControlName="facilityId" class="filter-select">
+          <option [ngValue]="null" disabled>-- Select Facility --</option>
+          @for (f of vm.facilities; track f.facilityId) {
+            <option [ngValue]="f.facilityId">{{ f.name }}</option>
+          }
+        </select>
+        @if (vm.ambulanceForm.get('facilityId')?.invalid && vm.ambulanceForm.get('facilityId')?.touched) {
+          <small class="error-text">Facility is required</small>
+        }
+      </div>
+    </div>
+    <button type="submit" class="btn-primary" [disabled]="vm.isRegisteringAmbulance || vm.ambulanceForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M10 10h4'></path><path d='M12 8v4'></path><rect x='2' y='4' width='20' height='13' rx='2'></rect><path d='M15 8h4l3 3v5h-7V8z'></path><circle cx='6' cy='18' r='2'></circle><circle cx='18' cy='18' r='2'></circle></svg> {{ vm.isRegisteringAmbulance ? 'Registering...' : 'Register Ambulance' }}</button>
+  </form>
+</div>
+
+<div class="ambulance-grid">
+  @for (a of vm.ambulances; track a.ambulanceId) {
+    <div class="ambulance-card">
+      <div class="card-header">
+        <span class="status-badge" [class]="a.status.toLowerCase()">{{ a.status }}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span class="vehicle-id">#{{ a.ambulanceId }}</span>
+          <button class="btn-delete-ambulance" (click)="vm.removeAmbulance(a)" title="Remove Ambulance" [disabled]="vm.isActionInFlight(vm.ambulanceRemoveActionKey(a.ambulanceId))">
+            <svg viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='3 6 5 6 21 6'></polyline><path d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'></path><line x1='10' y1='11' x2='10' y2='17'></line><line x1='14' y1='11' x2='14' y2='17'></line></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="ambulance-icon">
+          <svg class='icon' viewBox='0 0 24 24' width='2.5em' height='2.5em' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M10 10h4'></path><path d='M12 8v4'></path><rect x='2' y='4' width='20' height='13' rx='2'></rect><path d='M15 8h4l3 3v5h-7V8z'></path><circle cx='6' cy='18' r='2'></circle><circle cx='18' cy='18' r='2'></circle></svg>
+        </div>
+        <h3>{{ a.vehicleNumber }}</h3>
+        <p>{{ a.model || 'Standard Fleet' }}</p>
+        @if (a.facilityId) {
+          <p class="facility-tag"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><path d='M3 21h18'></path><path d='M5 21V7l7-4 7 4v14'></path><path d='M9 21v-6h6v6'></path></svg> {{ vm.getFacilityName(a.facilityId) }}</p>
+        }
+      </div>
+      <div class="card-actions">
+        @if (a.status === 'DISPATCHED') {
+          <span class="status-badge dispatched" style="padding:0.5rem 1rem;font-weight:600;text-align:center;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:0.4rem"><svg class='icon' viewBox='0 0 24 24' width='1em' height='1em' stroke='currentColor' stroke-width='2' fill='none' aria-hidden="true"><rect x='1' y='3' width='15' height='13'></rect><polygon points='16 8 20 8 23 11 23 16 16 16 16 8'></polygon><circle cx='5.5' cy='18.5' r='2.5'></circle><circle cx='18.5' cy='18.5' r='2.5'></circle></svg> In Service — Awaiting Patient Admission</span>
+        } @else {
+          <button class="btn-sm btn-info" style="min-width: 100px;" (click)="vm.updateAmbulanceStatus(a.ambulanceId, 'AVAILABLE')" [disabled]="a.status==='AVAILABLE' || vm.isActionInFlight(vm.ambulanceStatusActionKey(a.ambulanceId, 'AVAILABLE'))">{{ vm.isActionInFlight(vm.ambulanceStatusActionKey(a.ambulanceId, 'AVAILABLE')) ? 'Updating...' : 'Set Available' }}</button>
+          <button class="btn-sm btn-warning" style="min-width: 100px;" (click)="vm.updateAmbulanceStatus(a.ambulanceId, 'MAINTENANCE')" [disabled]="a.status==='MAINTENANCE' || vm.isActionInFlight(vm.ambulanceStatusActionKey(a.ambulanceId, 'MAINTENANCE'))">{{ vm.isActionInFlight(vm.ambulanceStatusActionKey(a.ambulanceId, 'MAINTENANCE')) ? 'Updating...' : 'Maintenance' }}</button>
+        }
+      </div>
+    </div>
+  }
+  @empty { <div class="empty" style="grid-column: span 3; text-align: center; padding: 3rem;">No ambulances registered</div> }
+</div>

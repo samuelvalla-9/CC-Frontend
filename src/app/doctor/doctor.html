@@ -62,74 +62,6 @@
         </div>
       </div>
 
-      <div class="overview-analytics-grid">
-        <section class="overview-panel chart-panel">
-          <div class="panel-header">
-            <h3>Treatment Activity (Past 7 Days)</h3>
-            <span class="panel-subtext">Daily treatment updates</span>
-          </div>
-
-          <div class="treatment-chart">
-            @for (point of treatmentTrend7d; track point.dateKey) {
-              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
-                <span class="chart-value">{{ point.count }}</span>
-                <div class="chart-bar-wrap">
-                  <div class="chart-bar" [style.height.%]="getTreatmentTrendBarHeight(point.count)"></div>
-                </div>
-                <span class="chart-label">{{ point.label }}</span>
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="overview-panel queue-panel">
-          <div class="panel-header">
-            <h3>High-Priority Patients</h3>
-            <span class="panel-subtext">Under observation</span>
-          </div>
-
-          <div class="priority-queue">
-            @if (highPriorityPatients.length === 0) {
-              <div class="empty-activity">No high-priority patients right now.</div>
-            } @else {
-              @for (p of highPriorityPatients; track p.patientId) {
-                <div class="queue-item">
-                  <div class="queue-main">
-                    <strong>#{{ p.patientId }}</strong>
-                    <span>Citizen {{ p.citizenId }} @if (p.ward) { • Ward {{ p.ward }} }</span>
-                  </div>
-                  <div class="queue-meta">
-                    <span class="status-badge" [class]="p.status.toLowerCase()">{{ p.status }}</span>
-                    <button class="btn-sm btn-info" (click)="togglePatientDetails(p)">Open</button>
-                  </div>
-                </div>
-              }
-            }
-          </div>
-        </section>
-      </div>
-
-      <section class="overview-panel activity-standalone">
-        <div class="panel-header">
-          <h3>Recent Clinical Activity</h3>
-          <span class="panel-subtext">Treatments, assignments and alerts</span>
-        </div>
-
-        <div class="activity-feed">
-          @if (recentClinicalActivity.length === 0) {
-            <div class="empty-activity">No recent clinical activity.</div>
-          } @else {
-            @for (item of recentClinicalActivity; track $index) {
-              <div [class]="'activity-item ' + getActivitySeverityClass(item.severity)">
-                <div class="activity-content">
-                  <p class="activity-message">{{ item.message }}</p>
-                  <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
-                </div>
-              </div>
-            }
-          }
-        </div>
-      </section>
     }
 
     @if (activeTab === 'patients') {
@@ -240,7 +172,7 @@
         </div>
 
         <div class="treatments-card">
-          @if (!assignedPatientIds.has(selectedPatient.patientId) && selectedPatient.status !== 'DISCHARGED' && showTreatmentForm !== selectedPatient.patientId) {
+          @if (isPatientUnassigned(selectedPatient) && selectedPatient.status !== 'DISCHARGED' && showTreatmentForm !== selectedPatient.patientId) {
             <div class="assignment-guidance" style="background: #eef6ff; border: 2px dashed #4a90d9; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
               <p style="color: #1a5276; font-size: 1rem; margin-bottom: 0.75rem;"><strong>This patient is not yet assigned to any doctor.</strong> Adding a treatment will automatically assign this patient to you.</p>
               <button class="btn-primary" style="font-size: 1.1rem; padding: 0.75rem 2rem;" (click)="openTreatmentForm(selectedPatient)">
@@ -378,7 +310,7 @@
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Patient ID</th><th>Description</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>ID</th><th>Patient ID</th><th>Description</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
             @for (t of myTreatments; track t.treatmentId) {
@@ -386,7 +318,8 @@
                 <td>#{{ t.treatmentId }}</td>
                 <td>{{ t.patientId }}</td>
                 <td>{{ t.description }}</td>
-                <td>{{ t.date | date }}</td>
+                <td>{{ (t.startDate || t.date) ? ((t.startDate || t.date) | date) : 'N/A' }}</td>
+                <td>{{ t.endDate ? (t.endDate | date) : 'ongoing' }}</td>
                 <td><span class="status-badge" [class]="t.status.toLowerCase()">{{ t.status }}</span></td>
                 <td>
                   @if (t.status === 'ONGOING') {
@@ -398,7 +331,7 @@
                 </td>
               </tr>
             }
-            @empty { <tr><td colspan="6" class="empty">No treatments recorded</td></tr> }
+            @empty { <tr><td colspan="7" class="empty">No treatments recorded</td></tr> }
           </tbody>
         </table>
       </div>
@@ -430,6 +363,3 @@
 
   </main>
 </div>
-
-
-

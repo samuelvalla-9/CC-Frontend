@@ -33,22 +33,16 @@ export class AdminService {
     return this.http.get<any>(`${this.API}/users`)
       .pipe(
         map(res => {
-          console.log('Raw API response:', res);
-          // Handle ApiResponse wrapper
           let users = res.data || res;
-          
-          // If still wrapped, try to unwrap
+
           if (users && users.data) {
             users = users.data;
           }
-          
-          // Ensure it's an array
+
           if (!Array.isArray(users)) {
-            console.error('Users is not an array:', users);
             return [];
           }
-          
-          // Map to ensure both id and userId exist
+
           return users.map((u: any) => ({
             ...u,
             id: u.userId || u.id,
@@ -64,36 +58,28 @@ export class AdminService {
   }
 
   activateUser(id: number): Observable<User> {
-    console.log('AdminService.activateUser called with id:', id);
     return this.http.patch<ApiResponse<User>>(`${this.API}/users/${id}/activate`, {})
       .pipe(map(res => {
-        console.log('AdminService.activateUser - Raw API response:', res);
         const user = res.data;
-        const mappedUser = { 
+        return {
           ...user, 
           id: user.userId, 
           userId: user.userId, 
           status: user.status || 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
         };
-        console.log('AdminService.activateUser - Mapped user:', mappedUser);
-        return mappedUser;
       }));
   }
 
   deactivateUser(id: number): Observable<User> {
-    console.log('AdminService.deactivateUser called with id:', id);
     return this.http.patch<ApiResponse<User>>(`${this.API}/users/${id}/deactivate`, {})
       .pipe(map(res => {
-        console.log('AdminService.deactivateUser - Raw API response:', res);
         const user = res.data;
-        const mappedUser = { 
+        return {
           ...user, 
           id: user.userId, 
           userId: user.userId, 
           status: user.status || 'INACTIVE' as 'ACTIVE' | 'INACTIVE'
         };
-        console.log('AdminService.deactivateUser - Mapped user:', mappedUser);
-        return mappedUser;
       }));
   }
 

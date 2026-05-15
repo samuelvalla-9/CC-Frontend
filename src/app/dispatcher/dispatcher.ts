@@ -123,10 +123,18 @@ export class DispatcherDashboard implements OnInit {
   }
 
   loadNotifications() {
+    this.notificationService.getMyUnreadCount().subscribe({
+      next: count => {
+        this.unreadCount = count;
+        this.refreshOverviewInsights();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
     this.notificationService.getMyNotifications().subscribe({
       next: d => { 
         this.notifications = d; 
-        this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
         this.refreshOverviewInsights();
         this.cdr.detectChanges();
       },

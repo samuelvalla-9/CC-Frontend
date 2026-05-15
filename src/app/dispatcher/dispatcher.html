@@ -119,54 +119,6 @@
         </div>
       </div>
 
-      <div class="overview-analytics-grid">
-        <section class="overview-panel chart-panel">
-          <div class="panel-header">
-            <h3>Dispatch Throughput (Past 7 Days)</h3>
-            <span class="panel-subtext">Daily completed dispatches</span>
-          </div>
-          <div class="dispatch-chart">
-            @for (point of dispatchTrend7d; track point.dateKey) {
-              <div class="chart-bar-group" [attr.title]="point.label + ': ' + point.count">
-                <span class="chart-value">{{ point.count }}</span>
-                <div class="chart-bar-wrap">
-                  <div class="chart-bar" [style.height.%]="getDispatchBarHeight(point.count)"></div>
-                </div>
-                <span class="chart-label">{{ point.label }}</span>
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="overview-panel activity-panel">
-          <div class="panel-header">
-            <h3>Recent Operations</h3>
-            <span class="panel-subtext">Latest dispatch and alert events</span>
-          </div>
-          <div class="activity-feed">
-            @if (recentOperations.length === 0) {
-              <div class="empty-activity">No recent operations available.</div>
-            } @else {
-              @for (item of recentOperations; track $index) {
-                <div class="activity-item" [ngClass]="getOperationSeverityClass(item.severity)">
-                  <div class="activity-content">
-                    <p class="activity-message">{{ item.message }}</p>
-                    <span class="activity-meta">{{ formatActivityTime(item.timestamp) }}</span>
-                  </div>
-                </div>
-              }
-            }
-          </div>
-        </section>
-      </div>
-
-      @if (pendingEmergencies.length === 0) {
-        <div class="form-card" style="margin-top:2rem;text-align:center;padding:3rem">
-          <svg class='icon' viewBox='0 0 24 24' width='3em' height='3em' stroke='currentColor' stroke-width='1.5' fill='none' style="opacity:0.3"><polyline points='20 6 9 17 4 12'></polyline></svg>
-          <h3 style="color:var(--gray-400);margin-top:1rem">All Clear</h3>
-          <p style="color:var(--gray-400)">No pending emergencies at this time</p>
-        </div>
-      }
     }
 
     @if (activeTab === 'history') {

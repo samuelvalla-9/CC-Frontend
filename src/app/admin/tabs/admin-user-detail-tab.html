@@ -1,0 +1,101 @@
+@if (vm.selectedUser) {
+  <div class="page-header">
+    <h2>User Details: {{ vm.selectedUser.name }}</h2>
+    <button class="btn-back" (click)="vm.setTab('users')">← Back</button>
+  </div>
+  <div class="detail-card">
+    <h3>User Information</h3>
+    <div class="detail-row"><span>User ID</span><strong>#{{ vm.selectedUser.userId }}</strong></div>
+    <div class="detail-row"><span>Role</span><span class="role-tag" [class]="'role-' + vm.selectedUser.role.toLowerCase()">{{ vm.selectedUser.role }}</span></div>
+    <div class="detail-row"><span>Status</span><span class="status-badge" [class]="(vm.selectedUser.status || 'ACTIVE').toLowerCase()">{{ vm.selectedUser.status || 'ACTIVE' }}</span></div>
+
+    @if (vm.userExtraDetails) {
+      @if (vm.selectedUser.role === 'CITIZEN') {
+        <h3 class="section-divider">Citizen Profile</h3>
+        <div class="detail-row"><span>Citizen ID</span><strong>#{{ vm.userExtraDetails.citizenId }}</strong></div>
+        <div class="detail-row"><span>Name</span><strong>{{ vm.userExtraDetails.name || vm.selectedUser.name }}</strong></div>
+        <div class="detail-row"><span>Email</span><strong>{{ vm.selectedUser.email }}</strong></div>
+        <div class="detail-row"><span>Contact</span><strong>{{ vm.userExtraDetails.contactInfo || 'N/A' }}</strong></div>
+        <div class="detail-row"><span>Address</span><strong>{{ vm.userExtraDetails.address || 'N/A' }}</strong></div>
+        <div class="detail-row"><span>Date of Birth</span><strong>{{ vm.userExtraDetails.dateOfBirth || 'N/A' }}</strong></div>
+        <div class="detail-row"><span>Gender</span><strong>{{ vm.userExtraDetails.gender || 'N/A' }}</strong></div>
+      }
+      @else if (vm.selectedUser.role === 'DOCTOR' || vm.selectedUser.role === 'DISPATCHER') {
+        <h3 class="section-divider">Staff Profile</h3>
+        <div class="detail-row"><span>Staff ID</span><strong>#{{ vm.userExtraDetails.staffId }}</strong></div>
+        <div class="detail-row"><span>Name</span><strong>{{ vm.userExtraDetails.name || vm.selectedUser.name }}</strong></div>
+        <div class="detail-row"><span>Email</span><strong>{{ vm.selectedUser.email }}</strong></div>
+        <div class="detail-row"><span>Contact</span><strong>{{ vm.userExtraDetails.contactInfo || 'N/A' }}</strong></div>
+        <div class="detail-row"><span>Facility</span><strong>{{ vm.userExtraDetails.facilityId ? vm.getFacilityName(vm.userExtraDetails.facilityId) : 'Not assigned' }}</strong></div>
+      }
+      @else {
+        <h3 class="section-divider">Profile Details</h3>
+        <div class="detail-row"><span>Name</span><strong>{{ vm.userExtraDetails.name || vm.selectedUser.name }}</strong></div>
+        <div class="detail-row"><span>Email</span><strong>{{ vm.userExtraDetails.email || vm.selectedUser.email }}</strong></div>
+        <div class="detail-row"><span>Phone</span><strong>{{ vm.userExtraDetails.phone || vm.selectedUser.phone || 'N/A' }}</strong></div>
+      }
+    } @else {
+      <div class="detail-row"><span>Name</span><strong>{{ vm.selectedUser.name }}</strong></div>
+      <div class="detail-row"><span>Email</span><strong>{{ vm.selectedUser.email }}</strong></div>
+      <div class="detail-row"><span>Phone</span><strong>{{ vm.selectedUser.phone || 'N/A' }}</strong></div>
+      <p class="loading-hint">Loading additional details...</p>
+    }
+    <div class="detail-actions">
+      @if (vm.errorMsg) { <div class="alert error alert-inline">{{ vm.errorMsg }}</div> }
+      @if (vm.selectedUser.status === 'ACTIVE') {
+        @if ((vm.selectedUser.userId || vm.selectedUser.id) !== (vm.auth.getUser()?.userId || vm.auth.getUser()?.id)) {
+          <button class="btn-warning btn row-action-button" (click)="vm.deactivateUser(vm.selectedUser.userId)" [disabled]="vm.isActionInFlight(vm.userActionKey('deactivate', vm.selectedUser.userId || vm.selectedUser.id))">{{ vm.isActionInFlight(vm.userActionKey('deactivate', vm.selectedUser.userId || vm.selectedUser.id)) ? 'Deactivating...' : 'Deactivate User' }}</button>
+        }
+      } @else {
+        <button class="btn-success btn row-action-button" (click)="vm.activateUser(vm.selectedUser.userId)" [disabled]="vm.isActionInFlight(vm.userActionKey('activate', vm.selectedUser.userId || vm.selectedUser.id))">{{ vm.isActionInFlight(vm.userActionKey('activate', vm.selectedUser.userId || vm.selectedUser.id)) ? 'Activating...' : 'Activate User' }}</button>
+      }
+      @if ((vm.selectedUser.userId || vm.selectedUser.id) !== (vm.auth.getUser()?.userId || vm.auth.getUser()?.id)) {
+        <button class="btn-danger btn row-action-button" (click)="vm.removeUser(vm.selectedUser.userId)" [disabled]="vm.isActionInFlight(vm.userActionKey('remove', vm.selectedUser.userId || vm.selectedUser.id))">{{ vm.isActionInFlight(vm.userActionKey('remove', vm.selectedUser.userId || vm.selectedUser.id)) ? 'Removing...' : 'Remove User' }}</button>
+      }
+    </div>
+  </div>
+
+  @if (vm.selectedUser.role === 'CITIZEN') {
+    <div class="table-card mt-section">
+      <h3 class="section-divider compact">Uploaded Documents</h3>
+      <table>
+        <thead><tr><th>Document ID</th><th>Upload Date</th><th>Status</th><th class="action-head">Actions</th></tr></thead>
+        <tbody>
+          @for (doc of vm.userDocuments; track doc.documentId) {
+            <tr>
+              <td>#{{ doc.documentId }}</td>
+              <td>{{ doc.uploadedDate }}</td>
+              <td><span class="status-badge" [class]="doc.verificationStatus.toLowerCase()">{{ doc.verificationStatus }}</span></td>
+              <td class="action-cell-right">
+                <button class="btn-sm btn-info row-action-button" (click)="vm.previewUserDocument(doc)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> View</button>
+              </td>
+            </tr>
+            @if (vm.previewingUserDocId === doc.documentId) {
+              <tr class="preview-row">
+                <td colspan="4">
+                  @if (vm.isLoadingUserDoc) {
+                    <div class="loading-spinner doc-loading"><div class="spinner"></div></div>
+                  }
+                  @if (vm.userDocPreviewUrl) {
+                    <div class="document-preview preview-panel">
+                      <div class="preview-header">
+                        <h3 class="preview-title">Document Preview</h3>
+                        <button class="btn-sm btn-secondary" (click)="vm.previewingUserDocId = null; vm.userDocPreviewUrl = null">Close Preview</button>
+                      </div>
+                      @if (vm.userDocIsImage) {
+                        <img [src]="vm.userDocPreviewUrl" class="preview-media" />
+                      } @else {
+                        <iframe [src]="vm.userDocPreviewUrl" class="preview-media preview-frame"></iframe>
+                      }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+          @empty { <tr><td colspan="4" class="empty">No documents uploaded</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  }
+}

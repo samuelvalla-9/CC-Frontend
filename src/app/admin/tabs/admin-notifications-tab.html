@@ -1,0 +1,21 @@
+<div class="page-header">
+  <h2>Notifications</h2>
+  @if (unreadCount > 0) {
+    <button class="btn-secondary push-right" (click)="markAllRead()" [disabled]="isActionInFlight('notifications-read-all')"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><polyline points='20 6 9 17 4 12'></polyline></svg> {{ isActionInFlight('notifications-read-all') ? 'Marking...' : 'Mark All Read' }}</button>
+  }
+</div>
+<div class="notifications-list">
+  @for (n of notifications; track n.notificationId) {
+    <div class="notification-item" [class.unread]="n.status==='UNREAD'">
+      <div class="notif-content">
+        <span class="notif-category">{{ n.category }}</span>
+        <p>{{ n.message }}</p>
+        <small>{{ n.createdDate | date:'medium' }}</small>
+      </div>
+      @if (n.status === 'UNREAD') {
+        <button class="btn-read" (click)="markRead(n.notificationId)" [disabled]="isActionInFlight('notification-read:' + n.notificationId)">{{ isActionInFlight('notification-read:' + n.notificationId) ? 'Marking...' : 'Mark Read' }}</button>
+      }
+    </div>
+  }
+  @empty { <p class="empty">No notifications</p> }
+</div>

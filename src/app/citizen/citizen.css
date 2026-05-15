@@ -113,6 +113,25 @@
   margin: var(--space-1) 0 0 0;
 }
 
+.overview-report-btn {
+  margin-left: auto;
+  animation: emergencyPulse 1.8s ease-in-out infinite;
+}
+
+.overview-report-btn:hover {
+  animation-play-state: paused;
+}
+
+@keyframes emergencyPulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
+  }
+}
+
 /* ============================================
    Stat Card Overrides for Dashboard
    ============================================ */
@@ -360,6 +379,10 @@
   .content { padding: var(--space-4); }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .profile-view { grid-template-columns: 1fr; }
+  .overview-report-btn {
+    width: 100%;
+    margin-top: var(--space-3);
+  }
 }
 
 /* Emergency Actions */

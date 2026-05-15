@@ -1,0 +1,102 @@
+<div class="page-header">
+  <h2>Facilities Management</h2>
+  <button class="btn-primary" (click)="vm.toggleAddFacility()">
+    <svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><line x1='12' y1='5' x2='12' y2='19'></line><line x1='5' y1='12' x2='19' y2='12'></line></svg>
+    Add New Facility
+  </button>
+</div>
+
+@if (vm.showAddFacility) {
+  <div class="form-card">
+    @if (vm.errorMsg) { <div class="alert error">{{ vm.errorMsg }}</div> }
+    <form [formGroup]="vm.facilityForm" (ngSubmit)="vm.addFacility()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Facility Name *</label>
+          <input type="text" formControlName="name" placeholder="Hospital name" />
+          @if (vm.facilityForm.get('name')?.invalid && vm.facilityForm.get('name')?.touched) {
+            <small class="error-text">Name is required (3-100 characters)</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Type *</label>
+          <select formControlName="type">
+            <option value="HOSPITAL">Hospital</option>
+            <option value="CLINIC">Clinic</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location *</label>
+          <input type="text" formControlName="location" placeholder="Address" />
+          @if (vm.facilityForm.get('location')?.invalid && vm.facilityForm.get('location')?.touched) {
+            <small class="error-text">Location is required</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Capacity *</label>
+          <input type="number" formControlName="capacity" placeholder="Bed count" />
+          @if (vm.facilityForm.get('capacity')?.invalid && vm.facilityForm.get('capacity')?.touched) {
+            <small class="error-text">Capacity must be 0 or more</small>
+          }
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem">
+        <button type="submit" class="btn-primary" [disabled]="vm.isSavingFacility || vm.facilityForm.invalid"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16'></path><path d='M12 9v4'></path><path d='M10 11h4'></path></svg> {{ vm.isSavingFacility ? 'Adding...' : 'Add Facility' }}</button>
+        <button type="button" class="btn-secondary" (click)="vm.toggleAddFacility()">Cancel</button>
+      </div>
+    </form>
+  </div>
+}
+
+<div class="filter-section">
+  <label>Filter by Status:</label>
+  <select [(ngModel)]="vm.facilityStatusFilter" (change)="vm.onFacilityFilterChange()" class="filter-select">
+    <option value="ALL">All Facilities</option>
+    <option value="ACTIVE">Active</option>
+    <option value="INACTIVE">Inactive</option>
+    <option value="MAINTENANCE">Maintenance</option>
+  </select>
+</div>
+
+<div class="table-card enterprise-grid">
+  <table>
+    <thead>
+      <tr>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('facilityId')">ID <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'facilityId') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('name')">Name <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'name') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('type')">Type <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'type') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('location')">Location <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'location') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('capacity')">Capacity <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'capacity') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th><button class="sort-header" (click)="vm.sortFacilitiesBy('status')">Status <span><svg viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">@if (vm.facilitySort.key === 'status') { @if (vm.facilitySort.direction === 'asc') { <polyline points="7 14 12 9 17 14"></polyline> } @else { <polyline points="7 10 12 15 17 10"></polyline> } } @else { <polyline points="7 14 12 9 17 14"></polyline><polyline points="7 10 12 15 17 10"></polyline> }</svg></span></button></th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (f of vm.filteredFacilities; track f.facilityId) {
+        <tr>
+          <td>#{{ f.facilityId }}</td>
+          <td>{{ f.name }}</td>
+          <td>{{ f.type }}</td>
+          <td>{{ f.location }}</td>
+          <td>{{ f.capacity }}</td>
+          <td><span class="status-badge" [class]="f.status.toLowerCase()">{{ f.status }}</span></td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-sm btn-info row-action-button" (click)="vm.editFacility(f)"><svg class='icon' viewBox='0 0 24 24' width='1.2em' height='1.2em' stroke='currentColor' stroke-width='2' fill='none'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg> Edit</button>
+              @if (f.status === 'ACTIVE') {
+                <button class="btn-sm btn-warning row-action-button" (click)="vm.updateFacilityStatus(f.facilityId, vm.FacilityStatus.INACTIVE)" [disabled]="vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.INACTIVE))">{{ vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.INACTIVE)) ? 'Updating...' : 'Deactivate' }}</button>
+              } @else if (f.status === 'INACTIVE') {
+                <button class="btn-sm btn-success row-action-button" (click)="vm.updateFacilityStatus(f.facilityId, vm.FacilityStatus.ACTIVE)" [disabled]="vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.ACTIVE))">{{ vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.ACTIVE)) ? 'Updating...' : 'Activate' }}</button>
+              } @else {
+                <button class="btn-sm btn-success row-action-button" (click)="vm.updateFacilityStatus(f.facilityId, vm.FacilityStatus.ACTIVE)" [disabled]="vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.ACTIVE))">{{ vm.isActionInFlight(vm.facilityStatusActionKey(f.facilityId, vm.FacilityStatus.ACTIVE)) ? 'Updating...' : 'Activate' }}</button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      @empty { <tr><td colspan="7" class="empty">No facilities</td></tr> }
+    </tbody>
+  </table>
+</div>

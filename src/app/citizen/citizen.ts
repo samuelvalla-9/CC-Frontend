@@ -140,7 +140,6 @@ export class CitizenDashboard implements OnInit {
   loadProfile() {
     this.citizenService.getMyProfile().subscribe({
       next: p => {
-        console.log('Profile loaded:', p);
         this.profile = p;
         if (this.isInitialProfileSetupPending) {
           this.isEditMode = true;
@@ -325,7 +324,6 @@ export class CitizenDashboard implements OnInit {
     this.citizenService.updateProfile(payload).subscribe({
       next: (updatedProfile) => {
         this.isSavingProfile = false;
-        console.log('Profile saved:', updatedProfile);
         this.profile = updatedProfile;
         this.isEditMode = false;
         this.restoreRequiredValidators();
@@ -350,12 +348,10 @@ export class CitizenDashboard implements OnInit {
 
   loadDocuments() {
     if (!this.profile?.citizenId) {
-      console.log('Cannot load documents - citizenId missing. Profile:', this.profile);
       return;
     }
     this.citizenService.getMyDocuments(this.profile.citizenId).subscribe({
       next: d => {
-        console.log('Documents loaded:', d);
         this.documents = [...d];
         this.refreshOverviewInsights();
       },
@@ -374,16 +370,13 @@ export class CitizenDashboard implements OnInit {
   uploadDocument() {
     if (this.isUploadingDoc) return;
     if (!this.selectedFile || !this.profile?.citizenId) {
-      console.log('Upload blocked - selectedFile:', this.selectedFile, 'citizenId:', this.profile?.citizenId);
       return;
     }
     this.errorMsg = '';
     this.isUploadingDoc = true;
-    console.log('Uploading document:', this.selectedFile.name, 'for citizen:', this.profile.citizenId);
     this.citizenService.uploadDocument(this.profile.citizenId, this.selectedFile).subscribe({
       next: (doc) => {
         this.isUploadingDoc = false;
-        console.log('Document uploaded successfully:', doc);
         this.selectedFile = null;
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
@@ -433,10 +426,18 @@ export class CitizenDashboard implements OnInit {
   }
 
   loadNotifications() {
+    this.notificationService.getMyUnreadCount().subscribe({
+      next: count => {
+        this.unreadCount = count;
+        this.refreshOverviewInsights();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
     this.notificationService.getMyNotifications().subscribe({
       next: d => {
         this.notifications = d;
-        this.unreadCount = d.filter(n => n.status === 'UNREAD').length;
         this.refreshOverviewInsights();
         this.cdr.detectChanges();
       },
@@ -642,7 +643,6 @@ export class CitizenDashboard implements OnInit {
     };
 
     this.isReportingEmergency = true;
-    console.log('Reporting emergency:', payload);
     this.emergencyService.reportEmergency(payload)
       .pipe(
         timeout(15000),

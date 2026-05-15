@@ -1,10 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, map, tap, of, timer, Subscription, switchMap, catchError } from 'rxjs';
+import { Observable, BehaviorSubject, map, tap, of, timer, Subscription, switchMap, catchError, forkJoin } from 'rxjs';
 import { AuthService } from './auth.service';
 import {
   Notification,
-  NotificationCategory,
   NotificationRequest,
   NotificationStatus,
   EmergencyEventRequest,
@@ -22,6 +21,7 @@ export class NotificationService {
   private readonly API = `${environment.apiBaseUrl}/notifications`;
   private readonly POLLING_INTERVAL_MS = 3000;
   private readonly notificationsSubject = new BehaviorSubject<Notification[]>([]);
+  private readonly unreadCountSubject = new BehaviorSubject<number>(0);
   private pollingSubscription: Subscription | null = null;
   private pollingInitializedForUser: number | null = null;
 
@@ -37,6 +37,7 @@ export class NotificationService {
     if (!userId) {
       this.stopPolling();
       this.notificationsSubject.next([]);
+      this.unreadCountSubject.next(0);
       return of([]);
     }
 
@@ -44,18 +45,21 @@ export class NotificationService {
     return this.notificationsSubject.asObservable();
   }
 
+  getMyUnreadCount(): Observable<number> {
+    const userId = this.auth.getUser()?.id;
+    if (!userId) {
+      this.stopPolling();
+      this.unreadCountSubject.next(0);
+      return of(0);
+    }
+
+    this.ensurePolling(userId);
+    return this.unreadCountSubject.asObservable();
+  }
+
   getNotificationsForUser(userId: number): Observable<Notification[]> {
     return this.http.get<ApiResponse<Notification[]>>(`${this.API}/user/${userId}`)
       .pipe(map(res => res.data ?? []));
-  }
-
-  getUnreadNotifications(): Observable<Notification[]> {
-    const userId = this.auth.getUser()?.id;
-    if (!userId) {
-      return of([]);
-    }
-
-    return this.getUnreadNotificationsForUser(userId);
   }
 
   getUnreadNotificationsForUser(userId: number): Observable<Notification[]> {
@@ -63,23 +67,9 @@ export class NotificationService {
       .pipe(map(res => res.data ?? []));
   }
 
-  getUnreadCount(): Observable<number> {
-    const userId = this.auth.getUser()?.id;
-    if (!userId) {
-      return of(0);
-    }
-
-    return this.getUnreadCountForUser(userId);
-  }
-
   getUnreadCountForUser(userId: number): Observable<number> {
     return this.http.get<ApiResponse<number>>(`${this.API}/user/${userId}/unread/count`)
       .pipe(map(res => res.data ?? 0));
-  }
-
-  getNotificationsByCategory(category: NotificationCategory): Observable<Notification[]> {
-    return this.http.get<ApiResponse<Notification[]>>(`${this.API}/category/${category}`)
-      .pipe(map(res => res.data ?? []));
   }
 
   markAsRead(notificationId: number): Observable<Notification> {
@@ -171,12 +161,16 @@ export class NotificationService {
     this.pollingSubscription = timer(0, this.POLLING_INTERVAL_MS)
       .pipe(
         switchMap(() =>
-          this.getNotificationsForUser(userId).pipe(
-            catchError(() => of([]))
-          )
+          forkJoin({
+            notifications: this.getNotificationsForUser(userId).pipe(catchError(() => of([]))),
+            unreadCount: this.getUnreadCountForUser(userId).pipe(catchError(() => of(0))),
+          })
         )
       )
-      .subscribe(items => this.notificationsSubject.next(items));
+      .subscribe(({ notifications, unreadCount }) => {
+        this.notificationsSubject.next(notifications);
+        this.unreadCountSubject.next(unreadCount);
+      });
 
     this.pollingInitializedForUser = userId;
   }
@@ -187,9 +181,13 @@ export class NotificationService {
       return;
     }
 
-    this.getNotificationsForUser(userId)
-      .pipe(catchError(() => of([])))
-      .subscribe(items => this.notificationsSubject.next(items));
+    forkJoin({
+      notifications: this.getNotificationsForUser(userId).pipe(catchError(() => of([]))),
+      unreadCount: this.getUnreadCountForUser(userId).pipe(catchError(() => of(0))),
+    }).subscribe(({ notifications, unreadCount }) => {
+      this.notificationsSubject.next(notifications);
+      this.unreadCountSubject.next(unreadCount);
+    });
   }
 
   private stopPolling() {
@@ -198,5 +196,6 @@ export class NotificationService {
       this.pollingSubscription = null;
     }
     this.pollingInitializedForUser = null;
+    this.unreadCountSubject.next(0);
   }
 }
